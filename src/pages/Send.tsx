@@ -4,11 +4,13 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import SendMoneyForm from "@/components/SendMoneyForm";
 
 const Send = () => {
   const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -20,7 +22,11 @@ const Send = () => {
   }, []);
 
   const handleTransactionSuccess = () => {
-    console.log("Transaction successful");
+    toast({
+      title: "Transfer Successful! 🎉",
+      description: "Your GCoins have been sent successfully.",
+      variant: "default",
+    });
   };
 
   return (

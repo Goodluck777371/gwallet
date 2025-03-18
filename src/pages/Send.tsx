@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import SendMoneyForm from "@/components/SendMoneyForm";
 
 const Send = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

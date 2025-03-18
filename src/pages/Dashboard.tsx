@@ -103,6 +103,7 @@ const Dashboard = () => {
               <WalletCard 
                 balance={balance} 
                 walletAddress={MOCK_WALLET_ADDRESS}
+                owner={user?.username || "You"}
               />
             </div>
             

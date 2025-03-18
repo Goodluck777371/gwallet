@@ -3,14 +3,16 @@ import { useState } from "react";
 import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 interface WalletCardProps {
   balance: number;
   walletAddress: string;
+  owner?: string; // Added owner field
   className?: string;
 }
 
-const WalletCard = ({ balance, walletAddress, className }: WalletCardProps) => {
+const WalletCard = ({ balance, walletAddress, owner = "You", className }: WalletCardProps) => {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -25,11 +27,27 @@ const WalletCard = ({ balance, walletAddress, className }: WalletCardProps) => {
     try {
       await navigator.clipboard.writeText(walletAddress);
       setCopied(true);
+      toast({
+        title: "Wallet address copied!",
+        description: "The wallet address has been copied to your clipboard.",
+      });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+      toast({
+        title: "Failed to copy",
+        description: "Please try again or copy manually.",
+        variant: "destructive",
+      });
     }
   };
+
+  // Calculate Naira equivalent (assuming 850 Naira per GCoin)
+  const nairaEquivalent = balance * 850;
+  const formattedNairaEquivalent = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN'
+  }).format(nairaEquivalent);
 
   return (
     <div className={cn(
@@ -54,14 +72,19 @@ const WalletCard = ({ balance, walletAddress, className }: WalletCardProps) => {
           </Button>
         </div>
         
-        <div className="mb-6">
+        <div className="mb-4">
           {showBalance ? (
-            <div className="flex items-baseline">
-              <span className="text-3xl font-bold">{formattedBalance}</span>
-              <span className="ml-2 text-lg font-medium text-gcoin-blue">GCoin</span>
+            <div>
+              <div className="flex items-baseline">
+                <span className="text-3xl font-bold">{formattedBalance}</span>
+                <span className="ml-2 text-lg font-medium text-gcoin-blue">GCoin</span>
+              </div>
+              <div className="mt-1 text-sm text-gray-500">
+                ≈ {formattedNairaEquivalent} NGN
+              </div>
             </div>
           ) : (
-            <div className="h-9 flex items-center">
+            <div className="h-12 flex items-center">
               <span className="text-2xl">•••••••</span>
             </div>
           )}
@@ -69,7 +92,10 @@ const WalletCard = ({ balance, walletAddress, className }: WalletCardProps) => {
         
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-medium text-gray-500">Wallet Address</h3>
+            <div className="flex items-center gap-1">
+              <h3 className="text-sm font-medium text-gray-500">Wallet Address</h3>
+              <span className="text-xs text-gray-400">({owner})</span>
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -80,7 +106,13 @@ const WalletCard = ({ balance, walletAddress, className }: WalletCardProps) => {
               {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
           </div>
-          <p className="text-sm font-mono bg-gray-50 dark:bg-gray-800 py-2 px-3 rounded-md">{shortenedAddress}</p>
+          <div 
+            className="text-sm font-mono bg-gray-50 dark:bg-gray-800 py-2 px-3 rounded-md flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            onClick={copyToClipboard}
+          >
+            <span>{shortenedAddress}</span>
+            <span className="text-xs text-gray-400">Click to copy</span>
+          </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4 mt-6">

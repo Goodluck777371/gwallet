@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight, Wallet, BarChart3, DollarSign, Clock } from "lucide-react";
+import { ArrowRight, Wallet, BarChart3, DollarSign, Clock, InboxIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,60 +13,11 @@ import TransactionItem, { Transaction } from "@/components/TransactionItem";
 // Mock data
 const MOCK_EXCHANGE_RATE = 850; // 1 GCoin = 850 Naira
 const MOCK_WALLET_ADDRESS = "gc_8e9d3fe2a79c4b5e8f6d3c2b1a5d4e3f2c1b5a4d3e2f1c5b4a3d2e1f";
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    type: "receive",
-    amount: 50,
-    recipient: "You",
-    sender: "John Doe",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    status: "completed",
-    description: "Payment for design work"
-  },
-  {
-    id: "2",
-    type: "send",
-    amount: 25.5,
-    recipient: "Sarah Wilson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-    status: "completed"
-  },
-  {
-    id: "3",
-    type: "receive",
-    amount: 10,
-    recipient: "You",
-    sender: "Michael Brown",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    status: "completed",
-    description: "Split lunch bill"
-  },
-  {
-    id: "4",
-    type: "send",
-    amount: 100,
-    recipient: "Lisa Johnson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    status: "completed"
-  },
-  {
-    id: "5",
-    type: "send",
-    amount: 5,
-    recipient: "Coffee Shop",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    status: "pending"
-  }
-];
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState(185.5);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -157,22 +108,41 @@ const Dashboard = () => {
                 <TabsContent value="recent" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {transactions.slice(0, 3).map((transaction) => (
-                        <TransactionItem 
-                          key={transaction.id}
-                          transaction={transaction}
-                          className={transaction.id !== transactions[2].id ? "border-b border-gray-100" : ""}
-                        />
-                      ))}
+                      {transactions.length > 0 ? (
+                        transactions.slice(0, 3).map((transaction, index) => (
+                          <TransactionItem 
+                            key={transaction.id}
+                            transaction={transaction}
+                            className={index !== Math.min(transactions.length, 3) - 1 ? "border-b border-gray-100" : ""}
+                          />
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12">
+                          <div className="bg-gray-100 rounded-full p-3 mb-3">
+                            <InboxIcon className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium mb-1">No Transactions Yet</h3>
+                          <p className="text-sm text-gray-500 mb-4 text-center max-w-xs">
+                            Start sending or receiving GCoins to see your transaction history here.
+                          </p>
+                          <Link to="/send">
+                            <Button variant="outline" size="sm">
+                              Send Your First GCoin
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
                       
-                      <div className="p-4 border-t border-gray-100">
-                        <Link to="/transactions">
-                          <Button variant="ghost" size="sm" className="w-full">
-                            View All Transactions
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </div>
+                      {transactions.length > 0 && (
+                        <div className="p-4 border-t border-gray-100">
+                          <Link to="/transactions">
+                            <Button variant="ghost" size="sm" className="w-full">
+                              View All Transactions
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -180,13 +150,30 @@ const Dashboard = () => {
                 <TabsContent value="all" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {transactions.map((transaction, index) => (
-                        <TransactionItem 
-                          key={transaction.id}
-                          transaction={transaction}
-                          className={index !== transactions.length - 1 ? "border-b border-gray-100" : ""}
-                        />
-                      ))}
+                      {transactions.length > 0 ? (
+                        transactions.map((transaction, index) => (
+                          <TransactionItem 
+                            key={transaction.id}
+                            transaction={transaction}
+                            className={index !== transactions.length - 1 ? "border-b border-gray-100" : ""}
+                          />
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12">
+                          <div className="bg-gray-100 rounded-full p-3 mb-3">
+                            <InboxIcon className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium mb-1">No Transactions Yet</h3>
+                          <p className="text-sm text-gray-500 mb-4 text-center max-w-xs">
+                            Start sending or receiving GCoins to see your transaction history here.
+                          </p>
+                          <Link to="/send">
+                            <Button variant="outline" size="sm">
+                              Send Your First GCoin
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

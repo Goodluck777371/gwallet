@@ -1,14 +1,23 @@
 
 import { useState } from "react";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface WalletCardProps {
   balance: number;
   walletAddress: string;
-  owner?: string; // Added owner field
+  owner?: string;
   className?: string;
 }
 
@@ -116,20 +125,79 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
         </div>
         
         <div className="grid grid-cols-2 gap-4 mt-6">
-          <Button 
-            className="bg-gcoin-blue/10 hover:bg-gcoin-blue/20 text-gcoin-blue flex items-center justify-center space-x-2 font-medium text-sm h-12"
-            variant="ghost"
-          >
-            <ArrowUpRight className="h-4 w-4 mr-1.5" />
-            <span>Send</span>
-          </Button>
-          <Button 
-            className="bg-gcoin-yellow/10 hover:bg-gcoin-yellow/20 text-gcoin-yellow flex items-center justify-center space-x-2 font-medium text-sm h-12"
-            variant="ghost"
-          >
-            <ArrowDownLeft className="h-4 w-4 mr-1.5" />
-            <span>Receive</span>
-          </Button>
+          <Link to="/send">
+            <Button 
+              className="bg-gcoin-blue/10 hover:bg-gcoin-blue/20 text-gcoin-blue flex items-center justify-center space-x-2 font-medium text-sm h-12 w-full"
+              variant="ghost"
+            >
+              <ArrowUpRight className="h-4 w-4 mr-1.5" />
+              <span>Send</span>
+            </Button>
+          </Link>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                className="bg-gcoin-yellow/10 hover:bg-gcoin-yellow/20 text-gcoin-yellow flex items-center justify-center space-x-2 font-medium text-sm h-12"
+                variant="ghost"
+              >
+                <ArrowDownLeft className="h-4 w-4 mr-1.5" />
+                <span>Receive</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Send GCoin to this address</DialogTitle>
+                <DialogDescription>
+                  Share your wallet address to receive GCoins from others
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="flex flex-col items-center justify-center p-4">
+                <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-4">
+                  <div className="bg-gcoin-yellow/10 p-6 rounded-lg">
+                    <div className="bg-white p-1 rounded-md">
+                      {/* Placeholder for a QR code - in production you would use a QR code library */}
+                      <div className="h-48 w-48 grid grid-cols-10 grid-rows-10 gap-0.5">
+                        {Array.from({ length: 100 }).map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`w-full h-full ${Math.random() > 0.7 ? 'bg-black' : 'bg-transparent'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="w-full text-center mb-2">
+                  <h3 className="text-sm font-medium mb-2">Wallet Address</h3>
+                  <div 
+                    onClick={copyToClipboard}
+                    className="cursor-pointer text-sm font-mono bg-gray-50 hover:bg-gray-100 py-3 px-4 rounded-md flex items-center justify-center break-all"
+                  >
+                    {walletAddress}
+                    {copied ? (
+                      <CheckCircle2 className="h-4 w-4 ml-2 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <Copy className="h-4 w-4 ml-2 text-gray-400 flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Click to copy</p>
+                </div>
+                
+                <div className="text-center mt-4">
+                  <span className="inline-flex items-center text-sm font-medium text-green-500">
+                    <span className="relative flex h-2 w-2 mr-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Ready to receive GCoins
+                  </span>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

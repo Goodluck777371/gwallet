@@ -46,21 +46,6 @@ const Send = () => {
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <SendMoneyForm onSuccess={handleTransactionSuccess} />
           </div>
-          
-          <div className={`mt-8 text-center transition-all duration-500 delay-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-            <h3 className="text-sm font-medium text-gray-500 mb-4">Recent Recipients</h3>
-            <div className="flex justify-center space-x-4">
-              <Button variant="outline" size="sm" className="rounded-full px-4">
-                John D.
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-full px-4">
-                Sarah W.
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-full px-4">
-                Michael B.
-              </Button>
-            </div>
-          </div>
         </div>
       </main>
     </div>

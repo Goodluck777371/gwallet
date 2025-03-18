@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -137,10 +138,36 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+type Toast = Omit<ToasterToast, "id"> & {
+  type?: "default" | "success" | "error" | "warning" | "info" | "credit" | "debit"
+}
 
 function toast({ ...props }: Toast) {
   const id = genId()
+
+  // Map type to variant for backward compatibility
+  let variant = props.variant;
+  if (props.type && !variant) {
+    switch (props.type) {
+      case "success":
+        variant = "default";
+        break;
+      case "error":
+        variant = "destructive";
+        break;
+      case "credit":
+        variant = "credit";
+        break;
+      case "debit":
+        variant = "debit";
+        break;
+      case "warning":
+      case "info":
+      default:
+        variant = "default";
+        break;
+    }
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -154,6 +181,7 @@ function toast({ ...props }: Toast) {
     toast: {
       ...props,
       id,
+      variant,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()

@@ -25,7 +25,7 @@ const Send = () => {
     toast({
       title: "Transfer Successful! 🎉",
       description: "Your GCoins have been sent successfully.",
-      variant: "default",
+      variant: "debit", // Using our new variant for debit transactions
     });
   };
 

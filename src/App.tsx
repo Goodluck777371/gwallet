@@ -17,6 +17,10 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import PriceChart from "./pages/PriceChart";
 import Convert from "./pages/Convert";
+import P2P from "./pages/P2P";
+import Blog from "./pages/Blog";
+import Admin from "./pages/Admin";
+import BlogEditor from "./pages/BlogEditor";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +68,10 @@ const AppRoutes = () => (
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
     <Route path="/price-chart" element={<ProtectedRoute><PriceChart /></ProtectedRoute>} />
     <Route path="/convert" element={<ProtectedRoute><Convert /></ProtectedRoute>} />
+    <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
+    <Route path="/blog" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
+    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+    <Route path="/admin/blog/editor" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

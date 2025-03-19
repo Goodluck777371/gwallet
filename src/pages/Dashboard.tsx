@@ -2,11 +2,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight, Wallet, BarChart3, DollarSign, Clock, InboxIcon } from "lucide-react";
+import { ArrowRight, InboxIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
 
@@ -35,10 +36,11 @@ const Dashboard = () => {
   }).format(nairaValue);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <Header />
+      <Sidebar />
       
-      <main className="pt-20 pb-16 px-4">
+      <main className="pt-20 pb-16 px-4 md:ml-64">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h1 className={`text-3xl font-bold transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
@@ -178,49 +180,6 @@ const Dashboard = () => {
                   </Card>
                 </TabsContent>
               </Tabs>
-            </div>
-          </div>
-          
-          <div className={`grid md:grid-cols-3 gap-6 transition-all duration-500 delay-500 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <div className="md:col-span-3">
-              <h2 className="text-xl font-semibold mb-4">Quick Access</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Link to="/send">
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
-                      <Wallet className="h-6 w-6 text-gcoin-blue" />
-                    </div>
-                    <h3 className="font-medium">Send GCoins</h3>
-                  </div>
-                </Link>
-                
-                <Link to="/transactions">
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
-                      <Clock className="h-6 w-6 text-gcoin-blue" />
-                    </div>
-                    <h3 className="font-medium">Transaction History</h3>
-                  </div>
-                </Link>
-                
-                <Link to="/exchange">
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
-                      <DollarSign className="h-6 w-6 text-gcoin-blue" />
-                    </div>
-                    <h3 className="font-medium">Exchange Rates</h3>
-                  </div>
-                </Link>
-                
-                <Link to="/settings">
-                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
-                      <BarChart3 className="h-6 w-6 text-gcoin-blue" />
-                    </div>
-                    <h3 className="font-medium">Account Settings</h3>
-                  </div>
-                </Link>
-              </div>
             </div>
           </div>
         </div>

@@ -22,11 +22,12 @@ export interface Transaction {
   fee?: number;
 }
 
-interface TransactionItemProps {
+export interface TransactionItemProps {
   transaction: Transaction;
+  className?: string;
 }
 
-const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
+const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, className }) => {
   const {
     type,
     amount,
@@ -104,7 +105,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
   };
   
   return (
-    <div className="flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+    <div className={cn("flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors", className)}>
       <div className="mr-4 bg-gray-100 rounded-full p-2">
         {getIcon()}
       </div>

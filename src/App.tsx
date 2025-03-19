@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
+import Exchange from "./pages/Exchange";
+import Stake from "./pages/Stake";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -54,6 +56,8 @@ const AppRoutes = () => (
     <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
+    <Route path="/exchange" element={<ProtectedRoute><Exchange /></ProtectedRoute>} />
+    <Route path="/stake" element={<ProtectedRoute><Stake /></ProtectedRoute>} />
     <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />

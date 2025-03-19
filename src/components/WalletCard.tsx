@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ interface WalletCardProps {
 const WalletCard = ({ balance, walletAddress, owner = "You", className }: WalletCardProps) => {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
 
   const formattedBalance = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
@@ -149,7 +151,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
               <DialogHeader>
                 <DialogTitle>Send GCoin to this address</DialogTitle>
                 <DialogDescription>
-                  Share your wallet address to receive GCoins from others
+                  Share your wallet address or QR code to receive GCoins from others
                 </DialogDescription>
               </DialogHeader>
               
@@ -157,7 +159,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
                 <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-4">
                   <div className="bg-gcoin-yellow/10 p-6 rounded-lg">
                     <div className="bg-white p-1 rounded-md">
-                      {/* Placeholder for a QR code - in production you would use a QR code library */}
+                      {/* Mock QR code for the wallet address */}
                       <div className="h-48 w-48 grid grid-cols-10 grid-rows-10 gap-0.5">
                         {Array.from({ length: 100 }).map((_, i) => (
                           <div 
@@ -171,7 +173,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
                 </div>
                 
                 <div className="w-full text-center mb-2">
-                  <h3 className="text-sm font-medium mb-2">Wallet Address</h3>
+                  <h3 className="text-sm font-medium mb-2">Your Wallet Address</h3>
                   <div 
                     onClick={copyToClipboard}
                     className="cursor-pointer text-sm font-mono bg-gray-50 hover:bg-gray-100 py-3 px-4 rounded-md flex items-center justify-center break-all"

@@ -1,13 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 // User type
 export interface User {
   id: string;
   username: string;
   email: string;
+  walletAddress: string;
+  balance: number;
 }
 
 // Auth context type
@@ -18,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateBalance: (newBalance: number) => void;
 }
 
 // Mock data for demonstration
@@ -26,7 +29,9 @@ const MOCK_USERS = [
     id: '1',
     username: 'demo',
     email: 'demo@example.com',
-    password: 'password123'
+    password: 'password123',
+    walletAddress: 'gCoin8272xrt92',
+    balance: 200
   }
 ];
 
@@ -54,6 +59,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
+  // Update user in local storage whenever user state changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('gcoin-user', JSON.stringify(user));
+    }
+  }, [user]);
+
   // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -76,8 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
       
       toast({
-        title: "Login successful",
-        description: `Welcome back, ${foundUser.username}!`,
+        title: `Welcome back, ${foundUser.username}! 🎉`,
+        description: "You've successfully logged in to your GCoin wallet.",
+        type: "success",
       });
 
       navigate('/dashboard');
@@ -105,12 +118,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Email already in use');
       }
 
+      // Generate unique wallet address
+      const walletPrefix = "gCoin";
+      const randomPart = Math.random().toString(36).substring(2, 6) + 
+                        Math.random().toString(36).substring(2, 6);
+      const walletAddress = `${walletPrefix}${randomPart}`;
+
       // Create new user
       const newUser = {
         id: String(Date.now()),
         username,
         email,
-        password
+        password,
+        walletAddress,
+        balance: 50 // Starting balance for new users
       };
 
       // In a real app, you would send this to your backend
@@ -125,8 +146,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
       
       toast({
-        title: "Registration successful",
-        description: `Welcome, ${username}!`,
+        title: `Welcome, ${username}! 🎉`,
+        description: "Your GCoin wallet has been created successfully with 50 GCoins bonus!",
+        type: "success",
       });
 
       navigate('/dashboard');
@@ -142,15 +164,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update balance function
+  const updateBalance = (newBalance: number) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        balance: newBalance
+      };
+      setUser(updatedUser);
+    }
+  };
+
   // Logout function
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('gcoin-user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    navigate('/');
+    // Confirm before logout
+    if (window.confirm("Are you sure you want to log out?")) {
+      setUser(null);
+      localStorage.removeItem('gcoin-user');
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate('/');
+    }
   };
 
   return (
@@ -161,7 +197,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
-        logout
+        logout,
+        updateBalance
       }}
     >
       {children}

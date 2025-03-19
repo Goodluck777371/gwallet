@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Search, Clock, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,94 +14,15 @@ import {
 import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
 
-// Mock data
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    type: "receive",
-    amount: 50,
-    recipient: "You",
-    sender: "John Doe",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    status: "completed",
-    description: "Payment for design work"
-  },
-  {
-    id: "2",
-    type: "send",
-    amount: 25.5,
-    recipient: "Sarah Wilson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-    status: "completed"
-  },
-  {
-    id: "3",
-    type: "receive",
-    amount: 10,
-    recipient: "You",
-    sender: "Michael Brown",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    status: "completed",
-    description: "Split lunch bill"
-  },
-  {
-    id: "4",
-    type: "send",
-    amount: 100,
-    recipient: "Lisa Johnson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    status: "completed"
-  },
-  {
-    id: "5",
-    type: "send",
-    amount: 5,
-    recipient: "Coffee Shop",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    status: "pending"
-  },
-  {
-    id: "6",
-    type: "receive",
-    amount: 75,
-    recipient: "You",
-    sender: "David Wilson",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
-    status: "completed",
-    description: "Consulting fee"
-  },
-  {
-    id: "7",
-    type: "send",
-    amount: 15.75,
-    recipient: "Restaurant",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-    status: "failed"
-  },
-  {
-    id: "8",
-    type: "receive",
-    amount: 200,
-    recipient: "You",
-    sender: "Emma Thompson",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
-    status: "completed",
-    description: "Project payment"
-  }
-];
-
 const Transactions = () => {
-  const { isAuthenticated } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const { isAuthenticated, user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,6 +31,20 @@ const Transactions = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Simulate fetching real user transactions
+  useEffect(() => {
+    if (user) {
+      // In a real app, this would be an API call to get user's transactions
+      // For demo, we'll create an empty array (no transactions for new users)
+      setIsLoading(true);
+      
+      setTimeout(() => {
+        setTransactions([]);
+        setIsLoading(false);
+      }, 1000);
+    }
+  }, [user]);
 
   useEffect(() => {
     let result = transactions;
@@ -203,6 +138,7 @@ const Transactions = () => {
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="refunded">Refunded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -210,7 +146,12 @@ const Transactions = () => {
             </div>
             
             <div className="divide-y divide-gray-100">
-              {filteredTransactions.length > 0 ? (
+              {isLoading ? (
+                <div className="py-20 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
+                  <p className="text-gray-500">Loading your transactions...</p>
+                </div>
+              ) : filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
                   <TransactionItem 
                     key={transaction.id}
@@ -218,8 +159,17 @@ const Transactions = () => {
                   />
                 ))
               ) : (
-                <div className="py-8 text-center">
-                  <p className="text-gray-500">No transactions found</p>
+                <div className="py-20 text-center">
+                  <div className="bg-gray-100 rounded-full p-4 inline-block mb-4">
+                    <AlertTriangle className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">No transactions yet</h3>
+                  <p className="text-gray-500 max-w-md mx-auto mb-8">
+                    You haven't made any transactions yet. When you send or receive GCoins, they will appear here.
+                  </p>
+                  <Button asChild>
+                    <a href="/send">Send your first GCoins</a>
+                  </Button>
                 </div>
               )}
             </div>

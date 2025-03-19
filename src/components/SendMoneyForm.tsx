@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2, Send, CheckCircle2, InfoIcon } from "lucide-react";
+import { Loader2, Send, CheckCircle2, InfoIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,7 +24,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
+
+// Mock registered wallet addresses for demo
+const REGISTERED_WALLETS = [
+  "gCoin8272xrt92", // User's own wallet
+  "gCoin7391xdq83", // Other registered wallet
+  "gCoin5137xpz64", // Other registered wallet
+];
 
 const formSchema = z.object({
   recipient: z.string().min(8, {
@@ -47,6 +55,7 @@ interface SendMoneyFormProps {
 
 const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
@@ -56,8 +65,12 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     fee: number;
     total: number;
     date: Date;
+    status: string;
     note?: string;
   } | null>(null);
+
+  // For demo purposes, we'll use the first wallet as the user's own wallet
+  const userWalletAddress = REGISTERED_WALLETS[0];
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -86,6 +99,17 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
+    // Check if user is sending to their own address
+    if (values.recipient === userWalletAddress) {
+      toast({
+        title: "Cannot send to yourself",
+        description: "You cannot send GCoins to your own wallet address.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
     // Check if user has enough balance (mock implementation)
     const mockUserBalance = 200; // This would come from your actual user state
     const totalCost = values.amount + fee;
@@ -112,30 +136,80 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Check if recipient exists in our database
+      const isRegisteredWallet = REGISTERED_WALLETS.includes(values.recipient);
       
       // Generate mock transaction ID
       const mockTransactionId = `TX${Date.now().toString().substring(5)}`;
       setTransactionId(mockTransactionId);
       
-      // Store transaction details for receipt
-      setTransactionDetails({
-        amount: values.amount,
-        recipient: values.recipient,
-        fee: fee,
-        total: values.amount + fee,
-        date: new Date(),
-        note: values.note
-      });
+      // If wallet is not registered, show pending and then refund after delay
+      if (!isRegisteredWallet) {
+        // Simulate transaction processing for unregistered wallet
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Store transaction details for pending state
+        setTransactionDetails({
+          amount: values.amount,
+          recipient: values.recipient,
+          fee: fee,
+          total: values.amount + fee,
+          date: new Date(),
+          status: "pending",
+          note: values.note
+        });
+        
+        // Show initial pending toast
+        toast({
+          title: "Transaction Pending",
+          description: "Sending to unregistered address. This may take a few minutes to confirm.",
+          variant: "default",
+          type: "warning"
+        });
+        
+        // Show success dialog
+        setShowSuccessDialog(true);
+        
+        // Simulate processing time then refund (2-7 minutes - shortened to 10 seconds for demo)
+        setTimeout(() => {
+          // Update transaction status to refunded
+          setTransactionDetails(prev => prev ? {
+            ...prev,
+            status: "refunded"
+          } : null);
+          
+          // Show refund toast
+          toast({
+            title: "Transaction Refunded",
+            description: "The recipient wallet address does not exist. Your GCoins have been refunded.",
+            variant: "credit",
+          });
+          
+        }, 10000); // 10 seconds for demo (would be 2-7 minutes in production)
+        
+      } else {
+        // Normal transaction to registered wallet
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Store transaction details for receipt
+        setTransactionDetails({
+          amount: values.amount,
+          recipient: values.recipient,
+          fee: fee,
+          total: values.amount + fee,
+          date: new Date(),
+          status: "completed",
+          note: values.note
+        });
+        
+        // Show success dialog
+        setShowSuccessDialog(true);
+        
+        // Call onSuccess callback
+        onSuccess();
+      }
       
-      // Show success dialog
-      setShowSuccessDialog(true);
-      
-      // Call onSuccess callback
-      onSuccess();
-      
-      // Reset form
+      // Reset form in both cases
       form.reset();
       
     } catch (error) {
@@ -283,19 +357,56 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-lg flex items-center justify-center">
-              <span className="animate-bounce inline-block mr-2">🎉</span>
-              Transfer Successful
-              <span className="animate-bounce inline-block ml-2">🎉</span>
+              {transactionDetails?.status === "completed" ? (
+                <>
+                  <span className="animate-bounce inline-block mr-2">🎉</span>
+                  Transfer Successful
+                  <span className="animate-bounce inline-block ml-2">🎉</span>
+                </>
+              ) : transactionDetails?.status === "pending" ? (
+                <>
+                  <Clock className="h-5 w-5 mr-2 text-yellow-500" />
+                  Transfer Pending
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
+                  Transfer Refunded
+                </>
+              )}
             </DialogTitle>
             <DialogDescription className="text-center">
-              Your GCoins have been sent successfully
+              {transactionDetails?.status === "completed" 
+                ? "Your GCoins have been sent successfully"
+                : transactionDetails?.status === "pending"
+                ? "Your transaction is being processed"
+                : "Your GCoins have been returned to your wallet"
+              }
             </DialogDescription>
           </DialogHeader>
           
-          <div className="p-4 bg-gradient-to-r from-gcoin-blue/5 to-gcoin-yellow/5 rounded-lg border border-gcoin-blue/10 space-y-4">
+          <div className={`p-4 rounded-lg border space-y-4 ${
+            transactionDetails?.status === "completed" 
+              ? "bg-gradient-to-r from-gcoin-blue/5 to-gcoin-yellow/5 border-gcoin-blue/10" 
+              : transactionDetails?.status === "pending"
+              ? "bg-yellow-50 border-yellow-200"
+              : "bg-red-50 border-red-200"
+          }`}>
             <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-green-100 p-3">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <div className={`rounded-full p-3 ${
+                transactionDetails?.status === "completed" 
+                  ? "bg-green-100" 
+                  : transactionDetails?.status === "pending"
+                  ? "bg-yellow-100"
+                  : "bg-red-100"
+              }`}>
+                {transactionDetails?.status === "completed" ? (
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                ) : transactionDetails?.status === "pending" ? (
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                ) : (
+                  <AlertTriangle className="h-8 w-8 text-red-600" />
+                )}
               </div>
             </div>
             
@@ -329,6 +440,25 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                 )}
                 <div className="pt-2 border-t border-gray-200">
                   <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Status:</span>
+                    <span className={`font-medium ${
+                      transactionDetails.status === "completed" 
+                        ? "text-green-600" 
+                        : transactionDetails.status === "pending"
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                    }`}>
+                      {transactionDetails.status === "completed" 
+                        ? "Completed" 
+                        : transactionDetails.status === "pending"
+                        ? "Pending"
+                        : "Refunded"
+                      }
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Transaction ID:</span>
                     <div className="flex items-center">
                       <span className="font-mono text-xs bg-gray-100 py-1 px-2 rounded cursor-pointer hover:bg-gray-200" onClick={copyTransactionId}>
@@ -358,9 +488,27 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
             )}
             
             <div className="mt-6 text-center">
+              {transactionDetails?.status === "pending" ? (
+                <div className="text-sm text-yellow-700 mb-3">
+                  <p>This transaction is being processed.</p>
+                  <p>If the recipient address doesn't exist, funds will be automatically refunded.</p>
+                </div>
+              ) : transactionDetails?.status === "refunded" ? (
+                <div className="text-sm text-red-700 mb-3">
+                  <p>The recipient wallet address does not exist in our system.</p>
+                  <p>Your funds have been refunded to your wallet.</p>
+                </div>
+              ) : null}
+              
               <Button 
                 onClick={handleCloseSuccessDialog}
-                className="bg-gradient-to-r from-gcoin-blue to-gcoin-blue/80 hover:from-gcoin-blue/90 hover:to-gcoin-blue"
+                className={
+                  transactionDetails?.status === "completed" 
+                    ? "bg-gradient-to-r from-gcoin-blue to-gcoin-blue/80 hover:from-gcoin-blue/90 hover:to-gcoin-blue" 
+                    : transactionDetails?.status === "pending"
+                    ? "bg-yellow-500 hover:bg-yellow-600"
+                    : "bg-red-500 hover:bg-red-600"
+                }
               >
                 Close
               </Button>

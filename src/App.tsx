@@ -15,6 +15,8 @@ import Stake from "./pages/Stake";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PriceChart from "./pages/PriceChart";
+import Convert from "./pages/Convert";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,8 @@ const AppRoutes = () => (
     <Route path="/stake" element={<ProtectedRoute><Stake /></ProtectedRoute>} />
     <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+    <Route path="/price-chart" element={<ProtectedRoute><PriceChart /></ProtectedRoute>} />
+    <Route path="/convert" element={<ProtectedRoute><Convert /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

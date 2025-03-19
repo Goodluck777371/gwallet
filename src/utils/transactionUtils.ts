@@ -52,6 +52,20 @@ export const updateTransaction = (userId: string, transactionId: string, updates
 };
 
 /**
+ * Load all transactions for a user
+ */
+export const getTransactions = (userId: string): Transaction[] => {
+  try {
+    const storageKey = `gcoin-transactions-${userId}`;
+    const transactionsJson = localStorage.getItem(storageKey);
+    return transactionsJson ? JSON.parse(transactionsJson) : [];
+  } catch (error) {
+    console.error("Failed to load transactions:", error);
+    return [];
+  }
+};
+
+/**
  * Integrate the sendMoney function with transaction tracking
  */
 export const sendMoney = (
@@ -128,4 +142,31 @@ export const sendMoney = (
       }
     }, 1500); // Simulate processing time (1.5 seconds for demo)
   });
+};
+
+// Currency conversion rates for GCoin
+export const currencyRates = {
+  USD: 0.9546,
+  EUR: 0.8332,
+  GBP: 0.7321,
+  NGN: 954.6,
+  JPY: 130.51,
+  CAD: 1.2439,
+  AUD: 1.3729,
+  GHS: 5.43,
+  KES: 130.51,
+  UGX: 3511,
+  TZS: 2234,
+  RWF: 893,
+  ETB: 42.51,
+  ZAR: 14.11,
+  MXN: 19.31,
+  BRL: 4.91,
+  INR: 71.51,
+  CNY: 6.53
+};
+
+// Convert GCoin to another currency
+export const convertGCoin = (amount: number, currency: keyof typeof currencyRates): number => {
+  return amount * currencyRates[currency];
 };

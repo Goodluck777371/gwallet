@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search, Clock, AlertTriangle } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Search, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
 
 const Transactions = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState("");
@@ -32,20 +32,34 @@ const Transactions = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Simulate fetching real user transactions
+  // Fetch user transactions from localStorage or other storage
   useEffect(() => {
     if (user) {
-      // In a real app, this would be an API call to get user's transactions
-      // For demo, we'll create an empty array (no transactions for new users)
       setIsLoading(true);
       
-      setTimeout(() => {
+      // In a real app, this would be an API call to get user's transactions
+      // For this demo, we'll check localStorage for any stored transactions
+      try {
+        const storedTransactions = localStorage.getItem(`gcoin-transactions-${user.id}`);
+        const userTransactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+        
+        // Parse dates from string back to Date objects
+        const parsedTransactions = userTransactions.map((tx: any) => ({
+          ...tx,
+          timestamp: new Date(tx.timestamp)
+        }));
+        
+        setTransactions(parsedTransactions);
+      } catch (error) {
+        console.error("Failed to load transactions:", error);
         setTransactions([]);
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     }
   }, [user]);
 
+  // Apply filters
   useEffect(() => {
     let result = transactions;
     

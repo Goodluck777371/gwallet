@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Clock, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, Calendar, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";

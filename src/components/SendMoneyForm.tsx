@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2, Send, CheckCircle2, InfoIcon, AlertTriangle } from "lucide-react";
+import { Loader2, Send, CheckCircle2, InfoIcon, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -55,7 +54,7 @@ interface SendMoneyFormProps {
 
 const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateBalance } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
@@ -69,8 +68,8 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     note?: string;
   } | null>(null);
 
-  // For demo purposes, we'll use the first wallet as the user's own wallet
-  const userWalletAddress = REGISTERED_WALLETS[0];
+  // For demo, use the user's wallet address from context
+  const userWalletAddress = user?.walletAddress || "";
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,11 +109,11 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
       return;
     }
     
-    // Check if user has enough balance (mock implementation)
-    const mockUserBalance = 200; // This would come from your actual user state
+    // Check if user has enough balance
+    const userBalance = user?.balance || 0;
     const totalCost = values.amount + fee;
     
-    if (totalCost > mockUserBalance) {
+    if (totalCost > userBalance) {
       toast({
         title: "Insufficient balance",
         description: `Your balance is too low for this transaction. You need ${totalCost.toFixed(2)} GCoins (including ${fee.toFixed(2)} GCoins fee).`,
@@ -143,6 +142,10 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
       const mockTransactionId = `TX${Date.now().toString().substring(5)}`;
       setTransactionId(mockTransactionId);
       
+      // Update user's balance immediately (debit)
+      const newBalance = userBalance - totalCost;
+      updateBalance(newBalance);
+      
       // If wallet is not registered, show pending and then refund after delay
       if (!isRegisteredWallet) {
         // Simulate transaction processing for unregistered wallet
@@ -164,7 +167,6 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
           title: "Transaction Pending",
           description: "Sending to unregistered address. This may take a few minutes to confirm.",
           variant: "default",
-          type: "warning"
         });
         
         // Show success dialog
@@ -177,6 +179,9 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
             ...prev,
             status: "refunded"
           } : null);
+          
+          // Refund the user's balance
+          updateBalance(userBalance);
           
           // Show refund toast
           toast({
@@ -243,6 +248,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
   };
 
+  
   return (
     <>
       <Form {...form}>
@@ -409,6 +415,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                 )}
               </div>
             </div>
+            
             
             {transactionDetails && (
               <div className="space-y-3">

@@ -90,7 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: `Welcome back, ${foundUser.username}! 🎉`,
         description: "You've successfully logged in to your GCoin wallet.",
-        type: "success",
       });
 
       navigate('/dashboard');
@@ -148,7 +147,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: `Welcome, ${username}! 🎉`,
         description: "Your GCoin wallet has been created successfully with 50 GCoins bonus!",
-        type: "success",
       });
 
       navigate('/dashboard');

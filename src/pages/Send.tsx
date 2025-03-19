@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import SendMoneyForm from "@/components/SendMoneyForm";
+import { saveTransaction } from "@/utils/transactionUtils";
 
 const Send = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -25,7 +26,7 @@ const Send = () => {
     toast({
       title: "Transfer Successful! 🎉",
       description: "Your GCoins have been sent successfully.",
-      variant: "debit", // Using our new variant for debit transactions
+      variant: "debit", // Using our variant for debit transactions
     });
   };
 

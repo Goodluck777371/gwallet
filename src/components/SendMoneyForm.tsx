@@ -25,13 +25,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
-
-// Mock registered wallet addresses for demo
-const REGISTERED_WALLETS = [
-  "gCoin8272xrt92", // User's own wallet
-  "gCoin7391xdq83", // Other registered wallet
-  "gCoin5137xpz64", // Other registered wallet
-];
+import { sendMoney } from "@/utils/transactionUtils";
+import { fetchAllWalletAddresses } from "@/services/profileService";
 
 const formSchema = z.object({
   recipient: z.string().min(8, {
@@ -58,6 +53,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
+  const [registeredWallets, setRegisteredWallets] = useState<string[]>([]);
   const [transactionDetails, setTransactionDetails] = useState<{
     amount: number;
     recipient: string;
@@ -67,6 +63,15 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     status: string;
     note?: string;
   } | null>(null);
+
+  // Fetch real wallet addresses
+  useEffect(() => {
+    const getWalletAddresses = async () => {
+      const addresses = await fetchAllWalletAddresses();
+      setRegisteredWallets(addresses.map(a => a.walletAddress));
+    };
+    getWalletAddresses();
+  }, []);
 
   // For demo, use the user's wallet address from context
   const userWalletAddress = user?.walletAddress || "";
@@ -96,6 +101,8 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   }, [watchAmount]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) return;
+    
     setIsSubmitting(true);
     
     // Check if user is sending to their own address
@@ -135,88 +142,50 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
 
     try {
-      // Check if recipient exists in our database
-      const isRegisteredWallet = REGISTERED_WALLETS.includes(values.recipient);
+      // Process the transaction through our utility function
+      const result = await sendMoney(
+        user.id,
+        userWalletAddress,
+        values.recipient,
+        values.amount,
+        fee,
+        values.note
+      );
       
-      // Generate mock transaction ID
-      const mockTransactionId = `TX${Date.now().toString().substring(5)}`;
-      setTransactionId(mockTransactionId);
+      setTransactionId(result.transactionId);
       
-      // Update user's balance immediately (debit)
+      // Update user's balance immediately (the sendMoney function handles the actual balance update in the database)
       const newBalance = userBalance - totalCost;
       updateBalance(newBalance);
       
-      // If wallet is not registered, show pending and then refund after delay
-      if (!isRegisteredWallet) {
-        // Simulate transaction processing for unregistered wallet
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Store transaction details for pending state
-        setTransactionDetails({
-          amount: values.amount,
-          recipient: values.recipient,
-          fee: fee,
-          total: values.amount + fee,
-          date: new Date(),
-          status: "pending",
-          note: values.note
-        });
-        
-        // Show initial pending toast
-        toast({
-          title: "Transaction Pending",
-          description: "Sending to unregistered address. This may take a few minutes to confirm.",
-          variant: "default",
-        });
-        
-        // Show success dialog
-        setShowSuccessDialog(true);
-        
-        // Simulate processing time then refund (2-7 minutes - shortened to 10 seconds for demo)
-        setTimeout(() => {
-          // Update transaction status to refunded
-          setTransactionDetails(prev => prev ? {
-            ...prev,
-            status: "refunded"
-          } : null);
-          
-          // Refund the user's balance
-          updateBalance(userBalance);
-          
-          // Show refund toast
-          toast({
-            title: "Transaction Refunded",
-            description: "The recipient wallet address does not exist. Your GCoins have been refunded.",
-            variant: "credit",
-          });
-          
-        }, 10000); // 10 seconds for demo (would be 2-7 minutes in production)
-        
-      } else {
-        // Normal transaction to registered wallet
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Store transaction details for receipt
-        setTransactionDetails({
-          amount: values.amount,
-          recipient: values.recipient,
-          fee: fee,
-          total: values.amount + fee,
-          date: new Date(),
-          status: "completed",
-          note: values.note
-        });
-        
-        // Show success dialog
-        setShowSuccessDialog(true);
-        
-        // Call onSuccess callback
+      // Store transaction details for the receipt
+      setTransactionDetails({
+        amount: values.amount,
+        recipient: values.recipient,
+        fee: fee,
+        total: values.amount + fee,
+        date: new Date(),
+        status: result.status,
+        note: values.note
+      });
+      
+      // Show success dialog
+      setShowSuccessDialog(true);
+      
+      // If successful, trigger the onSuccess callback
+      if (result.success) {
         onSuccess();
+      } else if (result.message) {
+        // Show message for failed transaction
+        toast({
+          title: result.status === "refunded" ? "Transaction Refunded" : "Transaction Failed",
+          description: result.message,
+          variant: result.status === "refunded" ? "credit" : "destructive",
+        });
       }
       
-      // Reset form in both cases
+      // Reset form
       form.reset();
-      
     } catch (error) {
       toast({
         title: "Transaction failed",

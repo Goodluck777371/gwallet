@@ -63,3 +63,45 @@ export async function updateUserBalance(userId: string, newBalance: number): Pro
     return false;
   }
 }
+
+export async function fetchAllWalletAddresses(): Promise<{id: string, walletAddress: string}[]> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, wallet_address');
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data.map(profile => ({
+      id: profile.id,
+      walletAddress: profile.wallet_address
+    }));
+  } catch (error) {
+    console.error('Error fetching wallet addresses:', error);
+    return [];
+  }
+}
+
+export async function fetchUserByWalletAddress(walletAddress: string): Promise<{id: string, username: string} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .eq('wallet_address', walletAddress)
+      .single();
+    
+    if (error) {
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      username: data.username
+    };
+  } catch (error) {
+    console.error('Error fetching user by wallet address:', error);
+    return null;
+  }
+}

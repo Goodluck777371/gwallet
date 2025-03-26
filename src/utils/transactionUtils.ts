@@ -1,6 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
+import { toast } from "@/hooks/use-toast";
+import { fetchUserByWalletAddress } from "@/services/profileService";
 
 // Export currency rates for use throughout the app
 export const currencyRates: Record<string, number> = {
@@ -96,7 +98,7 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
 };
 
 /**
- * Integrate the sendMoney function with transaction tracking and Supabase
+ * Send money to another wallet and track the transaction
  */
 export const sendMoney = async (
   userId: string,
@@ -132,17 +134,13 @@ export const sendMoney = async (
       // Save the initial pending transaction
       await saveTransaction(userId, transaction);
       
-      // Check for valid recipient wallet (now in Supabase)
-      const { data: recipientData, error: recipientError } = await supabase
-        .from('profiles')
-        .select('id, balance')
-        .eq('wallet_address', recipientWallet)
-        .single();
+      // Check for valid recipient wallet in Supabase
+      const recipientUser = await fetchUserByWalletAddress(recipientWallet);
       
       // Wait to simulate processing time for demo
       setTimeout(async () => {
         try {
-          if (recipientError || !recipientData) {
+          if (!recipientUser) {
             // Update transaction to refunded
             await updateTransaction(userId, transactionId, { status: "refunded" });
             
@@ -170,11 +168,19 @@ export const sendMoney = async (
             }
             
             // Update recipient's balance
-            const recipientNewBalance = Number(recipientData.balance) + amount;
-            await supabase
+            const { data: recipientData } = await supabase
               .from('profiles')
-              .update({ balance: recipientNewBalance })
-              .eq('id', recipientData.id);
+              .select('balance')
+              .eq('id', recipientUser.id)
+              .single();
+            
+            if (recipientData) {
+              const recipientNewBalance = Number(recipientData.balance) + amount;
+              await supabase
+                .from('profiles')
+                .update({ balance: recipientNewBalance })
+                .eq('id', recipientUser.id);
+            }
             
             // Create recipient's transaction record
             const recipientTransaction: Transaction = {
@@ -189,10 +195,17 @@ export const sendMoney = async (
               fee: 0
             };
             
-            await saveTransaction(recipientData.id, recipientTransaction);
+            await saveTransaction(recipientUser.id, recipientTransaction);
             
             // Update original transaction to completed
             await updateTransaction(userId, transactionId, { status: "completed" });
+            
+            // Show toast to sender
+            toast({
+              title: "Transfer Successful! 🎉",
+              description: `You've sent ${amount.toFixed(2)} GCoins to ${recipientUser.username}.`,
+              variant: "debit",
+            });
             
             // Resolve with success
             resolve({

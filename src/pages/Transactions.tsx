@@ -41,6 +41,7 @@ const Transactions = () => {
       const fetchTransactions = async () => {
         try {
           const userTransactions = await getTransactions(user.id);
+          console.log("Fetched transactions:", userTransactions);
           setTransactions(userTransactions);
         } catch (error) {
           console.error("Failed to load transactions:", error);

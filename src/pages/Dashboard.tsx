@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -27,10 +26,11 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch user transactions from Supabase
+  // Fetch user transactions from Supabase when user data is available
   useEffect(() => {
     if (user) {
       setIsLoadingTransactions(true);
+      console.log("Current user data:", user); // Debug user data
       
       const fetchTransactions = async () => {
         try {
@@ -64,6 +64,7 @@ const Dashboard = () => {
     fetchExchangeRate();
   }, []);
 
+  // Format the Naira value using the current exchange rate
   const nairaValue = user ? user.balance * exchangeRate : 0;
   const formattedNairaValue = new Intl.NumberFormat('en-NG', {
     style: 'currency',
@@ -80,6 +81,8 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  console.log("Current user balance:", user.balance); // Debug balance
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">

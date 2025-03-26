@@ -44,7 +44,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
+        setSupabaseUser(currentSession?.user || null);
+        
         if (currentSession?.user) {
           // Defer fetching profile data
           setTimeout(() => {
@@ -58,7 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Retrieved session:", currentSession?.user?.id);
       setSession(currentSession);
+      setSupabaseUser(currentSession?.user || null);
+      
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id);
       } else {
@@ -74,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -84,15 +91,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
+      console.log("Profile data retrieved:", data);
       if (data) {
         const profileData: User = {
           id: data.id,
           username: data.username,
           email: data.email,
-          walletAddress: data.wallet_address,
-          balance: Number(data.balance)
+          walletAddress: data.wallet_address || '',
+          balance: Number(data.balance) || 600000
         };
         setUser(profileData);
+        console.log("User profile set:", profileData);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -141,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (username: string, email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("Registering new user:", username, email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -155,6 +165,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
+      console.log("Registration success:", data);
+      
+      // Wait a moment to ensure the trigger has time to create the profile
+      setTimeout(() => {
+        if (data.user) {
+          fetchUserProfile(data.user.id);
+        }
+      }, 1000);
+
       toast({
         title: `Welcome, ${username}! 🎉`,
         description: "Your GCoin wallet has been created successfully with 600,000 GCoins!",
@@ -162,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       navigate('/dashboard');
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Registration failed",
         description: error.message || "Something went wrong",
@@ -177,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateBalance = async (newBalance: number) => {
     if (user && session) {
       try {
+        console.log("Updating balance to:", newBalance);
         const { error } = await supabase
           .from('profiles')
           .update({ balance: newBalance })
@@ -190,6 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...user,
           balance: newBalance
         });
+        
+        console.log("Balance updated successfully");
       } catch (error) {
         console.error('Error updating balance:', error);
         toast({

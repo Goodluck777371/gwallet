@@ -53,8 +53,8 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
     }
   };
 
-  // Calculate Naira equivalent (assuming 850 Naira per GCoin)
-  const nairaEquivalent = balance * 850;
+  // Calculate Naira equivalent based on the latest exchange rate
+  const nairaEquivalent = balance * 1005.6; // Using our updated exchange rate
   const formattedNairaEquivalent = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN'

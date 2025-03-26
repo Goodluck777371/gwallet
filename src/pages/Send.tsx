@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import SendMoneyForm from "@/components/SendMoneyForm";
-import { saveTransaction } from "@/utils/transactionUtils";
+import { saveTransaction } from "@/utils/transactionService";
 
 const Send = () => {
   const { user } = useAuth();

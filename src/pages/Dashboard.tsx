@@ -9,7 +9,8 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
-import { getTransactions, getExchangeRates } from "@/utils/transactionUtils";
+import { getTransactions } from "@/utils/transactionService";
+import { getExchangeRates } from "@/utils/currencyUtils";
 
 const Dashboard = () => {
   const { user } = useAuth();

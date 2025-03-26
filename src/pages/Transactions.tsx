@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -13,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
-import { getTransactions } from "@/utils/transactionUtils";
+import { getTransactions } from "@/utils/transactionService";
 
 const Transactions = () => {
   const { user } = useAuth();

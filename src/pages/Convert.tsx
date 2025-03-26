@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import { currencyRates, convertGCoin } from "@/utils/transactionUtils";
+import { currencyRates, convertGCoin } from "@/utils/currencyUtils";
 
 const Convert = () => {
   const { user } = useAuth();

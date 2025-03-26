@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
-import { sendMoney } from "@/utils/transactionUtils";
+import { sendMoney } from "@/utils/paymentService";
 import { fetchAllWalletAddresses } from "@/services/profileService";
 
 const formSchema = z.object({

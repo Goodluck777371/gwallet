@@ -1,9 +1,10 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { useAuthState } from '@/hooks/useAuthState';
+import { loginUser, registerUser, logoutUser } from '@/services/authService';
+import { updateUserBalance } from '@/services/profileService';
 
 // Custom User type
 export interface User {
@@ -32,193 +33,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, setUser, supabaseUser, session, isLoading } = useAuthState();
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Check for an existing session and set up auth state listener
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log("Auth state changed:", event, currentSession?.user?.id);
-        setSession(currentSession);
-        setSupabaseUser(currentSession?.user || null);
-        
-        if (currentSession?.user) {
-          // Defer fetching profile data
-          setTimeout(() => {
-            fetchUserProfile(currentSession.user.id);
-          }, 0);
-        } else {
-          setUser(null);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log("Retrieved session:", currentSession?.user?.id);
-      setSession(currentSession);
-      setSupabaseUser(currentSession?.user || null);
-      
-      if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Fetch user profile from Supabase
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log("Fetching profile for user:", userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      console.log("Profile data retrieved:", data);
-      if (data) {
-        const profileData: User = {
-          id: data.id,
-          username: data.username,
-          email: data.email,
-          walletAddress: data.wallet_address || '',
-          balance: Number(data.balance) || 600000
-        };
-        setUser(profileData);
-        console.log("User profile set:", profileData);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      toast({
-        title: "Failed to load profile",
-        description: "Please try logging in again",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Login function
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Welcome back! 🎉",
-        description: "You've successfully logged in to your GCoin wallet.",
-      });
-
+    const result = await loginUser(email, password);
+    if (result.success) {
       navigate('/dashboard');
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Register function
   const register = async (username: string, email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      console.log("Registering new user:", username, email);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username
-          }
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-
-      console.log("Registration success:", data);
-      
+    const result = await registerUser(username, email, password);
+    if (result.success) {
       // Wait a moment to ensure the trigger has time to create the profile
       setTimeout(() => {
-        if (data.user) {
-          fetchUserProfile(data.user.id);
+        if (result.data?.user) {
+          navigate('/dashboard');
         }
       }, 1000);
-
-      toast({
-        title: `Welcome, ${username}! 🎉`,
-        description: "Your GCoin wallet has been created successfully with 600,000 GCoins!",
-      });
-
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Update balance function
   const updateBalance = async (newBalance: number) => {
     if (user && session) {
-      try {
-        console.log("Updating balance to:", newBalance);
-        const { error } = await supabase
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', user.id);
-        
-        if (error) {
-          throw error;
-        }
-
+      const success = await updateUserBalance(user.id, newBalance);
+      if (success) {
         setUser({
           ...user,
           balance: newBalance
-        });
-        
-        console.log("Balance updated successfully");
-      } catch (error) {
-        console.error('Error updating balance:', error);
-        toast({
-          title: "Failed to update balance",
-          description: "Please try again later",
-          variant: "destructive",
         });
       }
     }
@@ -228,29 +74,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     // Confirm before logout
     if (window.confirm("Are you sure you want to log out?")) {
-      try {
-        const { error } = await supabase.auth.signOut();
-        
-        if (error) {
-          throw error;
-        }
-        
-        setUser(null);
-        setSession(null);
-        
-        toast({
-          title: "Logged out",
-          description: "You have been successfully logged out.",
-        });
-        
+      const success = await logoutUser();
+      if (success) {
         navigate('/');
-      } catch (error) {
-        console.error('Error logging out:', error);
-        toast({
-          title: "Logout failed",
-          description: "Please try again",
-          variant: "destructive",
-        });
       }
     }
   };

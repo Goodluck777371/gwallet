@@ -2,6 +2,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
 
+// Export currency rates for use throughout the app
+export const currencyRates: Record<string, number> = {
+  USD: 1005.6,
+  EUR: 837.9,
+  GBP: 736.2,
+  NGN: 959534.4,
+  JPY: 131146.9,
+  CAD: 1249.8,
+  AUD: 1380.0,
+  GHS: 5455.4
+};
+
 /**
  * Save a new transaction to the user's transaction history using Supabase
  */
@@ -18,7 +30,7 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
         sender: transaction.sender,
         status: transaction.status,
         description: transaction.description,
-        timestamp: new Date(transaction.timestamp)
+        timestamp: new Date(transaction.timestamp).toISOString() // Convert Date to ISO string
       });
     
     if (error) {
@@ -232,16 +244,7 @@ export const getExchangeRates = async (): Promise<Record<string, number>> => {
   } catch (error) {
     console.error("Failed to load exchange rates:", error);
     // Return default rates as fallback
-    return {
-      USD: 1005.6,
-      EUR: 837.9,
-      GBP: 736.2,
-      NGN: 959534.4,
-      JPY: 131146.9,
-      CAD: 1249.8,
-      AUD: 1380.0,
-      GHS: 5455.4
-    };
+    return currencyRates;
   }
 };
 
@@ -249,9 +252,9 @@ export const getExchangeRates = async (): Promise<Record<string, number>> => {
 export const convertGCoin = async (amount: number, currency: string): Promise<number> => {
   try {
     const rates = await getExchangeRates();
-    return amount * (rates[currency] || 1005.6);
+    return amount * (rates[currency] || currencyRates.USD);
   } catch (error) {
     console.error("Error converting GCoin:", error);
-    return amount * 1005.6; // Fallback to default rate
+    return amount * currencyRates.USD; // Fallback to default rate
   }
 };

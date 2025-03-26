@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import { Link } from "react-router-dom";

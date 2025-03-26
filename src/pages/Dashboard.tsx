@@ -10,16 +10,14 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
-
-// Mock data
-const MOCK_EXCHANGE_RATE = 850; // 1 GCoin = 850 Naira
-const MOCK_WALLET_ADDRESS = "gc_8e9d3fe2a79c4b5e8f6d3c2b1a5d4e3f2c1b5a4d3e2f1c5b4a3d2e1f";
+import { getTransactions, getExchangeRates } from "@/utils/transactionUtils";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [balance, setBalance] = useState(185.5);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(1005.6);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,11 +27,59 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const nairaValue = balance * MOCK_EXCHANGE_RATE;
+  // Fetch user transactions from Supabase
+  useEffect(() => {
+    if (user) {
+      setIsLoadingTransactions(true);
+      
+      const fetchTransactions = async () => {
+        try {
+          const userTransactions = await getTransactions(user.id);
+          setTransactions(userTransactions);
+        } catch (error) {
+          console.error("Failed to load transactions:", error);
+          setTransactions([]);
+        } finally {
+          setIsLoadingTransactions(false);
+        }
+      };
+
+      fetchTransactions();
+    }
+  }, [user]);
+
+  // Fetch exchange rates
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const rates = await getExchangeRates();
+        if (rates.USD) {
+          setExchangeRate(rates.USD);
+        }
+      } catch (error) {
+        console.error("Failed to load exchange rate:", error);
+      }
+    };
+
+    fetchExchangeRate();
+  }, []);
+
+  const nairaValue = user ? user.balance * exchangeRate : 0;
   const formattedNairaValue = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN'
   }).format(nairaValue);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
+          <p className="text-gray-500">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -54,9 +100,9 @@ const Dashboard = () => {
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div className={`md:col-span-2 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <WalletCard 
-                balance={balance} 
-                walletAddress={MOCK_WALLET_ADDRESS}
-                owner={user?.username || "You"}
+                balance={user.balance} 
+                walletAddress={user.walletAddress}
+                owner={user.username}
               />
             </div>
             
@@ -79,7 +125,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Exchange Rate</p>
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-semibold">₦{MOCK_EXCHANGE_RATE}</span>
+                      <span className="text-2xl font-semibold">₦{exchangeRate.toFixed(2)}</span>
                       <span className="ml-2 text-xs text-muted-foreground">per GCoin</span>
                     </div>
                   </div>
@@ -110,7 +156,12 @@ const Dashboard = () => {
                 <TabsContent value="recent" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {transactions.length > 0 ? (
+                      {isLoadingTransactions ? (
+                        <div className="py-20 text-center">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
+                          <p className="text-gray-500">Loading your transactions...</p>
+                        </div>
+                      ) : transactions.length > 0 ? (
                         transactions.slice(0, 3).map((transaction, index) => (
                           <TransactionItem 
                             key={transaction.id}
@@ -152,7 +203,12 @@ const Dashboard = () => {
                 <TabsContent value="all" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {transactions.length > 0 ? (
+                      {isLoadingTransactions ? (
+                        <div className="py-20 text-center">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
+                          <p className="text-gray-500">Loading your transactions...</p>
+                        </div>
+                      ) : transactions.length > 0 ? (
                         transactions.map((transaction, index) => (
                           <TransactionItem 
                             key={transaction.id}

@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from '@supabase/supabase-js';
 
 // User type
 export interface User {
@@ -15,6 +17,8 @@ export interface User {
 // Auth context type
 interface AuthContextType {
   user: User | null;
+  supabaseUser: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -23,80 +27,108 @@ interface AuthContextType {
   updateBalance: (newBalance: number) => void;
 }
 
-// Mock data for demonstration
-const MOCK_USERS = [
-  {
-    id: '1',
-    username: 'demo',
-    email: 'demo@example.com',
-    password: 'password123',
-    walletAddress: 'gCoin8272xrt92',
-    balance: 200
-  }
-];
-
 // Create the auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user is already logged in
+  // Check for an existing session and set up auth state listener
   useEffect(() => {
-    const storedUser = localStorage.getItem('gcoin-user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('gcoin-user');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        if (currentSession?.user) {
+          // Defer fetching profile data
+          setTimeout(() => {
+            fetchUserProfile(currentSession.user.id);
+          }, 0);
+        } else {
+          setUser(null);
+        }
       }
-    }
-    setIsLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      if (currentSession?.user) {
+        fetchUserProfile(currentSession.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Update user in local storage whenever user state changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('gcoin-user', JSON.stringify(user));
+  // Fetch user profile from Supabase
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const profileData: User = {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          walletAddress: data.wallet_address,
+          balance: Number(data.balance)
+        };
+        setUser(profileData);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      toast({
+        title: "Failed to load profile",
+        description: "Please try logging in again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [user]);
+  };
 
   // Login function
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Find user (in real app, would be a backend call)
-      const foundUser = MOCK_USERS.find(u => u.email === email && u.password === password);
-      
-      if (!foundUser) {
-        throw new Error('Invalid credentials');
+      if (error) {
+        throw error;
       }
 
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
-      
       toast({
-        title: `Welcome back, ${foundUser.username}! 🎉`,
+        title: "Welcome back! 🎉",
         description: "You've successfully logged in to your GCoin wallet.",
       });
 
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Invalid credentials",
         variant: "destructive",
       });
       throw error;
@@ -109,51 +141,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (username: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Check if email is already used (in real app, would be a backend call)
-      if (MOCK_USERS.some(u => u.email === email)) {
-        throw new Error('Email already in use');
-      }
-
-      // Generate unique wallet address
-      const walletPrefix = "gCoin";
-      const randomPart = Math.random().toString(36).substring(2, 6) + 
-                        Math.random().toString(36).substring(2, 6);
-      const walletAddress = `${walletPrefix}${randomPart}`;
-
-      // Create new user
-      const newUser = {
-        id: String(Date.now()),
-        username,
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        walletAddress,
-        balance: 50 // Starting balance for new users
-      };
-
-      // In a real app, you would send this to your backend
-      // For demo, we'll just add to our mock data
-      MOCK_USERS.push(newUser);
-
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = newUser;
+        options: {
+          data: {
+            username
+          }
+        }
+      });
       
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
-      
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: `Welcome, ${username}! 🎉`,
-        description: "Your GCoin wallet has been created successfully with 50 GCoins bonus!",
+        description: "Your GCoin wallet has been created successfully with 600,000 GCoins!",
       });
 
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
       throw error;
@@ -163,27 +174,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Update balance function
-  const updateBalance = (newBalance: number) => {
-    if (user) {
-      const updatedUser = {
-        ...user,
-        balance: newBalance
-      };
-      setUser(updatedUser);
+  const updateBalance = async (newBalance: number) => {
+    if (user && session) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ balance: newBalance })
+          .eq('id', user.id);
+        
+        if (error) {
+          throw error;
+        }
+
+        setUser({
+          ...user,
+          balance: newBalance
+        });
+      } catch (error) {
+        console.error('Error updating balance:', error);
+        toast({
+          title: "Failed to update balance",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
     // Confirm before logout
     if (window.confirm("Are you sure you want to log out?")) {
-      setUser(null);
-      localStorage.removeItem('gcoin-user');
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-      navigate('/');
+      try {
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+          throw error;
+        }
+        
+        setUser(null);
+        setSession(null);
+        
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+        
+        navigate('/');
+      } catch (error) {
+        console.error('Error logging out:', error);
+        toast({
+          title: "Logout failed",
+          description: "Please try again",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -191,6 +236,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        supabaseUser,
+        session,
         isAuthenticated: !!user,
         isLoading,
         login,

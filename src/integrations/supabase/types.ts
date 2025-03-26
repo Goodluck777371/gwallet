@@ -9,7 +9,119 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      exchange_rates: {
+        Row: {
+          currency: string
+          id: number
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          currency: string
+          id?: number
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          currency?: string
+          id?: number
+          rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      Gwallet: {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          updated_at: string
+          username: string
+          wallet_address: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          email: string
+          id: string
+          updated_at?: string
+          username: string
+          wallet_address: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          updated_at?: string
+          username?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          description: string | null
+          fee: number | null
+          id: string
+          recipient: string | null
+          sender: string | null
+          status: string
+          timestamp: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          description?: string | null
+          fee?: number | null
+          id?: string
+          recipient?: string | null
+          sender?: string | null
+          status: string
+          timestamp?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          description?: string | null
+          fee?: number | null
+          id?: string
+          recipient?: string | null
+          sender?: string | null
+          status?: string
+          timestamp?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

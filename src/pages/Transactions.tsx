@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
+import { getTransactions } from "@/utils/transactionUtils";
 
 const Transactions = () => {
   const { user } = useAuth();
@@ -32,30 +33,24 @@ const Transactions = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch user transactions from localStorage or other storage
+  // Fetch user transactions from Supabase
   useEffect(() => {
     if (user) {
       setIsLoading(true);
       
-      // In a real app, this would be an API call to get user's transactions
-      // For this demo, we'll check localStorage for any stored transactions
-      try {
-        const storedTransactions = localStorage.getItem(`gcoin-transactions-${user.id}`);
-        const userTransactions = storedTransactions ? JSON.parse(storedTransactions) : [];
-        
-        // Parse dates from string back to Date objects
-        const parsedTransactions = userTransactions.map((tx: any) => ({
-          ...tx,
-          timestamp: new Date(tx.timestamp)
-        }));
-        
-        setTransactions(parsedTransactions);
-      } catch (error) {
-        console.error("Failed to load transactions:", error);
-        setTransactions([]);
-      } finally {
-        setIsLoading(false);
-      }
+      const fetchTransactions = async () => {
+        try {
+          const userTransactions = await getTransactions(user.id);
+          setTransactions(userTransactions);
+        } catch (error) {
+          console.error("Failed to load transactions:", error);
+          setTransactions([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchTransactions();
     }
   }, [user]);
 
@@ -68,8 +63,8 @@ const Transactions = () => {
       const searchLower = search.toLowerCase();
       result = result.filter(
         (tx) => 
-          tx.sender.toLowerCase().includes(searchLower) ||
-          tx.recipient.toLowerCase().includes(searchLower) ||
+          tx.sender?.toLowerCase().includes(searchLower) ||
+          tx.recipient?.toLowerCase().includes(searchLower) ||
           tx.description?.toLowerCase().includes(searchLower)
       );
     }
@@ -86,6 +81,17 @@ const Transactions = () => {
     
     setFilteredTransactions(result);
   }, [search, typeFilter, statusFilter, transactions]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
+          <p className="text-gray-500">Loading your transactions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,3 +1,4 @@
+
 /**
  * Calculate transaction fee based on amount
  * - Flat 5% fee for all transactions

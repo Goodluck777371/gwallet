@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2, Send, CheckCircle2, InfoIcon, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, Send, CheckCircle2, InfoIcon, AlertTriangle, Clock, AtSign, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,15 +23,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
 import { sendMoney } from "@/utils/paymentService";
-import { fetchAllWalletAddresses } from "@/services/profileService";
+import { fetchAllWalletAddresses, fetchAllUsernames } from "@/services/profileService";
 
-const formSchema = z.object({
+const recipientAddressSchema = z.object({
   recipient: z.string().min(8, {
     message: "Recipient address must be at least 8 characters.",
+  }),
+  amount: z
+    .number()
+    .min(0.01, {
+      message: "Amount must be at least 0.01 GCoins.",
+    })
+    .max(1000000, {
+      message: "Amount cannot exceed 1,000,000 GCoins (daily limit).",
+    }),
+  note: z.string().optional(),
+});
+
+const recipientUsernameSchema = z.object({
+  recipient: z.string().min(3, {
+    message: "Username must be at least 3 characters.",
   }),
   amount: z
     .number()
@@ -55,6 +71,8 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
   const [registeredWallets, setRegisteredWallets] = useState<string[]>([]);
+  const [registeredUsernames, setRegisteredUsernames] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"address" | "username">("address");
   const [transactionDetails, setTransactionDetails] = useState<{
     amount: number;
     recipient: string;
@@ -63,22 +81,26 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     date: Date;
     status: string;
     note?: string;
+    isUsername?: boolean;
   } | null>(null);
 
-  // Fetch real wallet addresses
+  // Fetch real wallet addresses and usernames
   useEffect(() => {
-    const getWalletAddresses = async () => {
+    const getAddressesAndUsernames = async () => {
       const addresses = await fetchAllWalletAddresses();
       setRegisteredWallets(addresses.map(a => a.walletAddress));
+      
+      const usernames = await fetchAllUsernames();
+      setRegisteredUsernames(usernames.map(u => u.username));
     };
-    getWalletAddresses();
+    getAddressesAndUsernames();
   }, []);
 
   // For demo, use the user's wallet address from context
   const userWalletAddress = user?.walletAddress || "";
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const addressForm = useForm<z.infer<typeof recipientAddressSchema>>({
+    resolver: zodResolver(recipientAddressSchema),
     defaultValues: {
       recipient: "",
       amount: undefined,
@@ -86,31 +108,50 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     },
   });
 
-  const watchAmount = form.watch("amount");
+  const usernameForm = useForm<z.infer<typeof recipientUsernameSchema>>({
+    resolver: zodResolver(recipientUsernameSchema),
+    defaultValues: {
+      recipient: "",
+      amount: undefined,
+      note: "",
+    },
+  });
+
+  const watchAddressAmount = addressForm.watch("amount");
+  const watchUsernameAmount = usernameForm.watch("amount");
+  const currentAmount = activeTab === "address" ? watchAddressAmount : watchUsernameAmount;
+  
   const [fee, setFee] = useState(0);
   const [feeDescription, setFeeDescription] = useState("");
 
   useEffect(() => {
-    if (watchAmount && !isNaN(watchAmount)) {
-      const calculatedFee = calculateTransactionFee(watchAmount);
+    if (currentAmount && !isNaN(currentAmount)) {
+      const calculatedFee = calculateTransactionFee(currentAmount);
       setFee(calculatedFee);
-      setFeeDescription(getFeeDescription(watchAmount));
+      setFeeDescription(getFeeDescription(currentAmount));
     } else {
       setFee(0);
       setFeeDescription("");
     }
-  }, [watchAmount]);
+  }, [currentAmount]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "address" | "username");
+  };
+
+  const processTransaction = async (values: z.infer<typeof recipientAddressSchema | typeof recipientUsernameSchema>, isUsername: boolean) => {
     if (!user) return;
     
     setIsSubmitting(true);
     
-    // Check if user is sending to their own address
-    if (values.recipient === userWalletAddress) {
+    // Check if user is sending to their own address or username
+    if (
+      (!isUsername && values.recipient === userWalletAddress) || 
+      (isUsername && values.recipient === user.username)
+    ) {
       toast({
         title: "Cannot send to yourself",
-        description: "You cannot send GCoins to your own wallet address.",
+        description: "You cannot send GCoins to your own account.",
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -150,7 +191,8 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
         values.recipient,
         values.amount,
         fee,
-        values.note
+        values.note,
+        isUsername
       );
       
       setTransactionId(result.transactionId);
@@ -167,7 +209,8 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
         total: values.amount + fee,
         date: new Date(),
         status: result.status,
-        note: values.note
+        note: values.note,
+        isUsername: isUsername
       });
       
       // Show success dialog
@@ -185,8 +228,9 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
         });
       }
       
-      // Reset form
-      form.reset();
+      // Reset forms
+      addressForm.reset();
+      usernameForm.reset();
     } catch (error) {
       toast({
         title: "Transaction failed",
@@ -196,6 +240,14 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onAddressSubmit = async (values: z.infer<typeof recipientAddressSchema>) => {
+    await processTransaction(values, false);
+  };
+
+  const onUsernameSubmit = async (values: z.infer<typeof recipientUsernameSchema>) => {
+    await processTransaction(values, true);
   };
 
   const handleCloseSuccessDialog = () => {
@@ -218,116 +270,246 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
   };
 
-  
   return (
     <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="recipient"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Recipient Address</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter wallet address"
-                    autoComplete="off"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Enter the GCoin wallet address of the recipient.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Amount (GCoins)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0.01"
-                    onChange={(e) => {
-                      const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                      field.onChange(value);
-                    }}
-                    value={field.value?.toString() || ""}
-                  />
-                </FormControl>
-                <FormDescription className="flex flex-col">
-                  <span>Enter the amount of GCoins to send.</span>
-                  {watchAmount && !isNaN(watchAmount) && (
-                    <div className="mt-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span>Transaction Fee:</span>
-                        <span className="font-medium">{fee.toFixed(2)} GCoins</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-gray-500">
-                        <span>{feeDescription}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-100">
-                        <span className="font-medium">Total:</span>
-                        <span className="font-medium">
-                          {watchAmount ? (watchAmount + fee).toFixed(2) : "0.00"} GCoins
+      <Tabs defaultValue="address" onValueChange={handleTabChange}>
+        <TabsList className="grid grid-cols-2 mb-6">
+          <TabsTrigger value="address" className="flex items-center">
+            <Wallet className="mr-2 h-4 w-4" />
+            Wallet Address
+          </TabsTrigger>
+          <TabsTrigger value="username" className="flex items-center">
+            <AtSign className="mr-2 h-4 w-4" />
+            Username
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="address">
+          <Form {...addressForm}>
+            <form onSubmit={addressForm.handleSubmit(onAddressSubmit)} className="space-y-6">
+              <FormField
+                control={addressForm.control}
+                name="recipient"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recipient Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter wallet address"
+                        autoComplete="off"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter the GCoin wallet address of the recipient.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={addressForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount (GCoins)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0.01"
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          field.onChange(value);
+                        }}
+                        value={field.value?.toString() || ""}
+                      />
+                    </FormControl>
+                    <FormDescription className="flex flex-col">
+                      <span>Enter the amount of GCoins to send.</span>
+                      {watchAddressAmount && !isNaN(watchAddressAmount) && (
+                        <div className="mt-2 text-sm">
+                          <div className="flex justify-between items-center">
+                            <span>Transaction Fee:</span>
+                            <span className="font-medium">{fee.toFixed(2)} GCoins</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>{feeDescription}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-100">
+                            <span className="font-medium">Total:</span>
+                            <span className="font-medium">
+                              {watchAddressAmount ? (watchAddressAmount + fee).toFixed(2) : "0.00"} GCoins
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={addressForm.control}
+                name="note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add a note to this transaction"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Add a note that will be visible to the recipient.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send GCoins
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+        </TabsContent>
+        
+        <TabsContent value="username">
+          <Form {...usernameForm}>
+            <form onSubmit={usernameForm.handleSubmit(onUsernameSubmit)} className="space-y-6">
+              <FormField
+                control={usernameForm.control}
+                name="recipient"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recipient Username</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-500">
+                          <AtSign className="h-4 w-4" />
                         </span>
+                        <Input
+                          placeholder="username"
+                          autoComplete="off"
+                          className="pl-9"
+                          {...field}
+                        />
                       </div>
-                    </div>
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="note"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note (Optional)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Add a note to this transaction"
-                    className="resize-none"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Add a note that will be visible to the recipient.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Send GCoins
-              </>
-            )}
-          </Button>
-        </form>
-      </Form>
+                    </FormControl>
+                    <FormDescription>
+                      Enter the username of the recipient.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={usernameForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount (GCoins)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0.01"
+                        onChange={(e) => {
+                          const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                          field.onChange(value);
+                        }}
+                        value={field.value?.toString() || ""}
+                      />
+                    </FormControl>
+                    <FormDescription className="flex flex-col">
+                      <span>Enter the amount of GCoins to send.</span>
+                      {watchUsernameAmount && !isNaN(watchUsernameAmount) && (
+                        <div className="mt-2 text-sm">
+                          <div className="flex justify-between items-center">
+                            <span>Transaction Fee:</span>
+                            <span className="font-medium">{fee.toFixed(2)} GCoins</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-500">
+                            <span>{feeDescription}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-100">
+                            <span className="font-medium">Total:</span>
+                            <span className="font-medium">
+                              {watchUsernameAmount ? (watchUsernameAmount + fee).toFixed(2) : "0.00"} GCoins
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={usernameForm.control}
+                name="note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add a note to this transaction"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Add a note that will be visible to the recipient.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send GCoins
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+        </TabsContent>
+      </Tabs>
       
       <Dialog open={showSuccessDialog} onOpenChange={handleCloseSuccessDialog}>
         <DialogContent className="sm:max-w-md">
@@ -403,8 +585,20 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                 </div>
                 <div className="pt-2 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">To:</span>
-                    <span className="font-medium text-sm">{`${transactionDetails.recipient.substring(0, 8)}...${transactionDetails.recipient.substring(transactionDetails.recipient.length - 8)}`}</span>
+                    <span className="text-sm text-gray-500">Sent to:</span>
+                    <span className="font-medium text-sm flex items-center">
+                      {transactionDetails.isUsername ? (
+                        <>
+                          <AtSign className="h-3 w-3 mr-1" />
+                          {transactionDetails.recipient}
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="h-3 w-3 mr-1" />
+                          {`${transactionDetails.recipient.substring(0, 6)}...${transactionDetails.recipient.substring(transactionDetails.recipient.length - 6)}`}
+                        </>
+                      )}
+                    </span>
                   </div>
                 </div>
                 {transactionDetails.note && (
@@ -472,7 +666,9 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                 </div>
               ) : transactionDetails?.status === "refunded" ? (
                 <div className="text-sm text-red-700 mb-3">
-                  <p>The recipient wallet address does not exist in our system.</p>
+                  <p>{transactionDetails.isUsername 
+                    ? "The username you entered does not exist in our system." 
+                    : "The wallet address you entered does not exist in our system."}</p>
                   <p>Your funds have been refunded to your wallet.</p>
                 </div>
               ) : null}

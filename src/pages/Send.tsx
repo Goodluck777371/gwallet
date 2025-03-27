@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -45,7 +46,7 @@ const Send = () => {
               Send GCoins
             </h1>
             <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Transfer GCoins to another wallet
+              Transfer GCoins to another wallet or username
             </p>
           </div>
           

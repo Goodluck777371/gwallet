@@ -105,3 +105,45 @@ export async function fetchUserByWalletAddress(walletAddress: string): Promise<{
     return null;
   }
 }
+
+export async function fetchUserByUsername(username: string): Promise<{id: string, walletAddress: string} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, wallet_address')
+      .eq('username', username)
+      .single();
+    
+    if (error) {
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      walletAddress: data.wallet_address
+    };
+  } catch (error) {
+    console.error('Error fetching user by username:', error);
+    return null;
+  }
+}
+
+export async function fetchAllUsernames(): Promise<{id: string, username: string}[]> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username');
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data.map(profile => ({
+      id: profile.id,
+      username: profile.username
+    }));
+  } catch (error) {
+    console.error('Error fetching usernames:', error);
+    return [];
+  }
+}

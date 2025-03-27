@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
 import { toast } from "@/hooks/use-toast";
-import { fetchUserByWalletAddress } from "@/services/profileService";
+import { fetchUserByWalletAddress, fetchUserByUsername } from "@/services/profileService";
 import { saveTransaction, updateTransaction } from "./transactionService";
 
 // Admin wallet address - fees will be sent here
@@ -14,10 +14,11 @@ const ADMIN_WALLET = "gCoinAdmin123456";
 export const sendMoney = async (
   userId: string,
   senderWallet: string,
-  recipientWallet: string,
+  recipient: string,
   amount: number,
   fee: number,
-  note?: string
+  note?: string,
+  isUsername: boolean = false
 ): Promise<{
   success: boolean;
   transactionId: string;
@@ -28,6 +29,20 @@ export const sendMoney = async (
     try {
       // Generate transaction ID
       const transactionId = `TX${Date.now().toString().substring(5)}`;
+      
+      // Get the actual wallet address if recipient is a username
+      let recipientWallet = recipient;
+      let recipientUser: { id: string; username?: string } | null = null;
+      
+      if (isUsername) {
+        const userData = await fetchUserByUsername(recipient);
+        if (userData) {
+          recipientWallet = userData.walletAddress;
+          recipientUser = { id: userData.id, username: recipient };
+        }
+      } else {
+        recipientUser = await fetchUserByWalletAddress(recipientWallet);
+      }
       
       // Create transaction object
       const transaction: Transaction = {
@@ -45,9 +60,6 @@ export const sendMoney = async (
       // Save the initial pending transaction
       await saveTransaction(userId, transaction);
       
-      // Check for valid recipient wallet in Supabase
-      const recipientUser = await fetchUserByWalletAddress(recipientWallet);
-      
       // Wait to simulate processing time for demo
       setTimeout(async () => {
         try {
@@ -60,7 +72,9 @@ export const sendMoney = async (
               success: false,
               transactionId,
               status: "refunded",
-              message: "Recipient wallet address does not exist. Your GCoins have been refunded."
+              message: isUsername 
+                ? `User with username '${recipient}' does not exist. Your GCoins have been refunded.`
+                : "Recipient wallet address does not exist. Your GCoins have been refunded."
             });
           } else {
             // Fetch admin user for fee transfer
@@ -155,7 +169,7 @@ export const sendMoney = async (
             // Show toast to sender
             toast({
               title: "Transfer Successful! 🎉",
-              description: `You've sent ${amount.toFixed(2)} GCoins to ${recipientUser.username}.`,
+              description: `You've sent ${amount.toFixed(2)} GCoins to ${recipientUser.username || recipientWallet}.`,
               variant: "debit",
             });
             

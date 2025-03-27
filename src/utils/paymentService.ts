@@ -35,13 +35,19 @@ export const sendMoney = async (
       let recipientUser: { id: string; username?: string } | null = null;
       
       if (isUsername) {
+        console.log("Looking up user by username:", recipient);
         const userData = await fetchUserByUsername(recipient);
         if (userData) {
           recipientWallet = userData.walletAddress;
           recipientUser = { id: userData.id, username: recipient };
+          console.log("Found user by username:", userData);
+        } else {
+          console.log("Username not found:", recipient);
         }
       } else {
+        console.log("Looking up user by wallet address:", recipientWallet);
         recipientUser = await fetchUserByWalletAddress(recipientWallet);
+        console.log("Wallet lookup result:", recipientUser);
       }
       
       // Create transaction object
@@ -64,6 +70,8 @@ export const sendMoney = async (
       setTimeout(async () => {
         try {
           if (!recipientUser) {
+            console.log("Recipient not found, refunding transaction");
+            
             // Update transaction to refunded
             await updateTransaction(userId, transactionId, { status: "refunded" });
             
@@ -77,6 +85,8 @@ export const sendMoney = async (
                 : "Recipient wallet address does not exist. Your GCoins have been refunded."
             });
           } else {
+            console.log("Processing valid transaction to recipient:", recipientUser.id);
+            
             // Fetch admin user for fee transfer
             const { data: adminData } = await supabase
               .from('profiles')
@@ -165,13 +175,6 @@ export const sendMoney = async (
             
             // Update original transaction to completed
             await updateTransaction(userId, transactionId, { status: "completed" });
-            
-            // Show toast to sender
-            toast({
-              title: "Transfer Successful! 🎉",
-              description: `You've sent ${amount.toFixed(2)} GCoins to ${recipientUser.username || recipientWallet}.`,
-              variant: "debit",
-            });
             
             // Resolve with success
             resolve({

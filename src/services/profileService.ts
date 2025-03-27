@@ -74,6 +74,7 @@ export async function fetchAllWalletAddresses(): Promise<{id: string, walletAddr
       throw error;
     }
     
+    console.log("Fetched all wallet addresses:", data.length);
     return data.map(profile => ({
       id: profile.id,
       walletAddress: profile.wallet_address
@@ -86,6 +87,7 @@ export async function fetchAllWalletAddresses(): Promise<{id: string, walletAddr
 
 export async function fetchUserByWalletAddress(walletAddress: string): Promise<{id: string, username: string} | null> {
   try {
+    console.log("Looking up user by wallet address:", walletAddress);
     const { data, error } = await supabase
       .from('profiles')
       .select('id, username')
@@ -93,9 +95,11 @@ export async function fetchUserByWalletAddress(walletAddress: string): Promise<{
       .single();
     
     if (error) {
+      console.log("No user found with wallet address:", walletAddress);
       return null;
     }
     
+    console.log("Found user with wallet address:", data);
     return {
       id: data.id,
       username: data.username
@@ -108,6 +112,7 @@ export async function fetchUserByWalletAddress(walletAddress: string): Promise<{
 
 export async function fetchUserByUsername(username: string): Promise<{id: string, walletAddress: string} | null> {
   try {
+    console.log("Looking up user by username:", username);
     const { data, error } = await supabase
       .from('profiles')
       .select('id, wallet_address')
@@ -115,9 +120,11 @@ export async function fetchUserByUsername(username: string): Promise<{id: string
       .single();
     
     if (error) {
+      console.log("No user found with username:", username);
       return null;
     }
     
+    console.log("Found user with username:", data);
     return {
       id: data.id,
       walletAddress: data.wallet_address
@@ -138,6 +145,7 @@ export async function fetchAllUsernames(): Promise<{id: string, username: string
       throw error;
     }
     
+    console.log("Fetched all usernames:", data.length);
     return data.map(profile => ({
       id: profile.id,
       username: profile.username

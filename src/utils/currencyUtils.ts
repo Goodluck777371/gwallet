@@ -1,16 +1,16 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Export currency rates for use throughout the app
+// Export updated currency rates for use throughout the app
 export const currencyRates: Record<string, number> = {
-  USD: 1005.6,
-  EUR: 837.9,
-  GBP: 736.2,
-  NGN: 959534.4,
-  JPY: 131146.9,
-  CAD: 1249.8,
-  AUD: 1380.0,
-  GHS: 5455.4
+  USD: 1001.2,
+  EUR: 925.4,
+  GBP: 785.3,
+  NGN: 1430342.8,
+  JPY: 152382.4,
+  CAD: 1362.8,
+  AUD: 1496.7,
+  GHS: 12354.7
 };
 
 /**

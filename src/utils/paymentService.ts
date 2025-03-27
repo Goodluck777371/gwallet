@@ -5,6 +5,9 @@ import { toast } from "@/hooks/use-toast";
 import { fetchUserByWalletAddress } from "@/services/profileService";
 import { saveTransaction, updateTransaction } from "./transactionService";
 
+// Admin wallet address - fees will be sent here
+const ADMIN_WALLET = "gCoinAdmin123456";
+
 /**
  * Send money to another wallet and track the transaction
  */
@@ -60,6 +63,15 @@ export const sendMoney = async (
               message: "Recipient wallet address does not exist. Your GCoins have been refunded."
             });
           } else {
+            // Fetch admin user for fee transfer
+            const { data: adminData } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('wallet_address', ADMIN_WALLET)
+              .single();
+            
+            const adminId = adminData ? adminData.id : null;
+            
             // Update sender's balance
             const { data: senderData } = await supabase
               .from('profiles')
@@ -88,6 +100,38 @@ export const sendMoney = async (
                 .from('profiles')
                 .update({ balance: recipientNewBalance })
                 .eq('id', recipientUser.id);
+            }
+            
+            // Transfer fee to admin account if exists
+            if (adminId) {
+              const { data: adminBalanceData } = await supabase
+                .from('profiles')
+                .select('balance')
+                .eq('id', adminId)
+                .single();
+              
+              if (adminBalanceData) {
+                const adminNewBalance = Number(adminBalanceData.balance) + fee;
+                await supabase
+                  .from('profiles')
+                  .update({ balance: adminNewBalance })
+                  .eq('id', adminId);
+                
+                // Create fee transaction record for admin
+                const feeTransaction: Transaction = {
+                  id: `FEE${Date.now().toString().substring(5)}`,
+                  type: "receive",
+                  amount: fee,
+                  recipient: ADMIN_WALLET,
+                  sender: senderWallet,
+                  timestamp: new Date(),
+                  status: "completed",
+                  description: `Transaction fee from ${transactionId}`,
+                  fee: 0
+                };
+                
+                await saveTransaction(adminId, feeTransaction);
+              }
             }
             
             // Create recipient's transaction record

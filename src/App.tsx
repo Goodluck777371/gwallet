@@ -39,6 +39,26 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Admin route component - only accessible to admin users
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // Check if user is admin (has admin wallet)
+  if (user?.walletAddress !== "gCoinAdmin123456") {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return <>{children}</>;
+};
+
 // Auth routes (accessible only when NOT authenticated)
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -70,8 +90,8 @@ const AppRoutes = () => (
     <Route path="/convert" element={<ProtectedRoute><Convert /></ProtectedRoute>} />
     <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
     <Route path="/blog" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
-    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-    <Route path="/admin/blog/editor" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
+    <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+    <Route path="/admin/blog/editor" element={<AdminRoute><BlogEditor /></AdminRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

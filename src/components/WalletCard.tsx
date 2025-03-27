@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } from "lucide-react";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { currencyRates } from "@/utils/currencyUtils";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
   };
 
   // Calculate Naira equivalent based on the latest exchange rate
-  const nairaEquivalent = balance * 1005.6; // Using our updated exchange rate
+  const nairaEquivalent = balance * currencyRates.NGN;
   const formattedNairaEquivalent = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN'

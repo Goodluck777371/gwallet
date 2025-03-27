@@ -23,7 +23,7 @@ export async function fetchUserProfile(userId: string): Promise<User | null> {
         username: data.username,
         email: data.email,
         walletAddress: data.wallet_address || '',
-        balance: Number(data.balance) || 600000
+        balance: Number(data.balance) || 0
       };
       return profileData;
     }

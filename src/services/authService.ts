@@ -51,7 +51,7 @@ export async function registerUser(username: string, email: string, password: st
     
     toast({
       title: `Welcome, ${username}! 🎉`,
-      description: "Your GCoin wallet has been created successfully with 600,000 GCoins!",
+      description: "Your GCoin wallet has been created successfully.",
     });
 
     return { success: true, data };

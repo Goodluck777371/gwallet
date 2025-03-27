@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -10,12 +11,12 @@ import Sidebar from "@/components/Sidebar";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
 import { getTransactions } from "@/utils/transactionService";
-import { getExchangeRates } from "@/utils/currencyUtils";
+import { getExchangeRates, currencyRates } from "@/utils/currencyUtils";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(1005.6);
+  const [exchangeRate, setExchangeRate] = useState<number>(currencyRates.NGN);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
@@ -54,8 +55,8 @@ const Dashboard = () => {
     const fetchExchangeRate = async () => {
       try {
         const rates = await getExchangeRates();
-        if (rates.USD) {
-          setExchangeRate(rates.USD);
+        if (rates.NGN) {
+          setExchangeRate(rates.NGN);
         }
       } catch (error) {
         console.error("Failed to load exchange rate:", error);
@@ -104,9 +105,9 @@ const Dashboard = () => {
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div className={`md:col-span-2 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <WalletCard 
-                balance={user.balance} 
-                walletAddress={user.walletAddress}
-                owner={user.username}
+                balance={user?.balance || 0} 
+                walletAddress={user?.walletAddress || ''}
+                owner={user?.username}
               />
             </div>
             
@@ -129,7 +130,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Exchange Rate</p>
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-semibold">₦{exchangeRate.toFixed(2)}</span>
+                      <span className="text-2xl font-semibold">₦{exchangeRate.toLocaleString('en-NG')}</span>
                       <span className="ml-2 text-xs text-muted-foreground">per GCoin</span>
                     </div>
                   </div>

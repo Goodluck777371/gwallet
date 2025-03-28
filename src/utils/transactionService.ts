@@ -7,25 +7,36 @@ import { Transaction } from "@/components/TransactionItem";
  */
 export const saveTransaction = async (userId: string, transaction: Transaction): Promise<void> => {
   try {
+    console.log("Saving transaction for user:", userId, transaction);
+    
+    // Prepare transaction data for saving to database
+    const transactionData = {
+      id: transaction.id, // Now using UUID format
+      user_id: userId,
+      type: transaction.type,
+      amount: transaction.amount,
+      fee: transaction.fee || 0,
+      recipient: transaction.recipient,
+      sender: transaction.sender,
+      status: transaction.status,
+      description: transaction.description,
+      timestamp: new Date(transaction.timestamp).toISOString(), // Convert Date to ISO string
+      related_transaction_id: transaction.relatedTransactionId
+    };
+    
     const { error } = await supabase
       .from('transactions')
-      .insert({
-        user_id: userId,
-        type: transaction.type,
-        amount: transaction.amount,
-        fee: transaction.fee || 0,
-        recipient: transaction.recipient,
-        sender: transaction.sender,
-        status: transaction.status,
-        description: transaction.description,
-        timestamp: new Date(transaction.timestamp).toISOString() // Convert Date to ISO string
-      });
+      .insert(transactionData);
     
     if (error) {
+      console.error("Error saving transaction:", error);
       throw error;
     }
+    
+    console.log("Transaction saved successfully:", transaction.id);
   } catch (error) {
     console.error("Failed to save transaction:", error);
+    throw error; // Re-throw to allow handling by calling function
   }
 };
 
@@ -34,20 +45,30 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
  */
 export const updateTransaction = async (userId: string, transactionId: string, updates: Partial<Transaction>): Promise<void> => {
   try {
+    console.log("Updating transaction:", transactionId, updates);
+    
+    // Prepare update data
+    const updateData: Record<string, any> = {};
+    
+    if (updates.status) updateData.status = updates.status;
+    if (updates.description) updateData.description = updates.description;
+    // Add other fields that can be updated as needed
+    
     const { error } = await supabase
       .from('transactions')
-      .update({
-        status: updates.status,
-        // Add other fields that can be updated as needed
-      })
+      .update(updateData)
       .eq('id', transactionId)
       .eq('user_id', userId);
     
     if (error) {
+      console.error("Error updating transaction:", error);
       throw error;
     }
+    
+    console.log("Transaction updated successfully:", transactionId);
   } catch (error) {
     console.error("Failed to update transaction:", error);
+    throw error; // Re-throw to allow handling by calling function
   }
 };
 
@@ -56,6 +77,8 @@ export const updateTransaction = async (userId: string, transactionId: string, u
  */
 export const getTransactions = async (userId: string): Promise<Transaction[]> => {
   try {
+    console.log("Fetching transactions for user:", userId);
+    
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -63,8 +86,11 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
       .order('timestamp', { ascending: false });
     
     if (error) {
+      console.error("Error fetching transactions:", error);
       throw error;
     }
+    
+    console.log(`Retrieved ${data.length} transactions for user:`, userId);
     
     return data.map((item: any) => ({
       id: item.id,
@@ -75,7 +101,8 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
       timestamp: new Date(item.timestamp),
       status: item.status,
       description: item.description,
-      fee: Number(item.fee)
+      fee: Number(item.fee),
+      relatedTransactionId: item.related_transaction_id
     }));
   } catch (error) {
     console.error("Failed to load transactions:", error);

@@ -20,6 +20,7 @@ export interface Transaction {
   sender?: string;
   description?: string;
   fee?: number;
+  relatedTransactionId?: string; // Reference to related transaction
 }
 
 export interface TransactionItemProps {
@@ -86,13 +87,20 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, classNam
     }
   };
   
+  // Format wallet address for display
+  const formatWalletAddress = (wallet?: string) => {
+    if (!wallet) return "";
+    if (wallet.length <= 12) return wallet;
+    return `${wallet.substring(0, 8)}...`;
+  };
+  
   // Get transaction title
   const getTitle = () => {
     switch (type) {
       case "send":
-        return `Sent GCoin${recipient ? ` to ${recipient.substring(0, 8)}...` : ""}`;
+        return `Sent GCoin${recipient ? ` to ${formatWalletAddress(recipient)}` : ""}`;
       case "receive":
-        return `Received GCoin${sender ? ` from ${sender.substring(0, 8)}...` : ""}`;
+        return `Received GCoin${sender ? ` from ${formatWalletAddress(sender)}` : ""}`;
       case "stake":
         return "Staked GCoin";
       case "unstake":
@@ -105,7 +113,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, classNam
   };
   
   return (
-    <div className={cn("flex items-center p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors", className)}>
+    <div className={cn("flex items-center p-4 hover:bg-gray-50 transition-colors", className)}>
       <div className="mr-4 bg-gray-100 rounded-full p-2">
         {getIcon()}
       </div>

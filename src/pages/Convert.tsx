@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import { currencyRates, convertGCoin } from "@/utils/currencyUtils";
+import { currencyRates, getExchangeRates } from "@/utils/currencyUtils";
 
 const Convert = () => {
   const { user } = useAuth();
@@ -28,14 +29,32 @@ const Convert = () => {
   const [gCoinAmount, setGCoinAmount] = useState<number>(1);
   const [selectedCurrency, setSelectedCurrency] = useState<string>("USD");
   const [convertedAmount, setConvertedAmount] = useState<number>(0);
+  const [rates, setRates] = useState<Record<string, number>>(currencyRates);
+  
+  // Fetch the latest exchange rates when component mounts
+  useEffect(() => {
+    const loadRates = async () => {
+      try {
+        const latestRates = await getExchangeRates();
+        setRates(latestRates);
+        console.log("Loaded exchange rates:", latestRates);
+      } catch (error) {
+        console.error("Failed to load exchange rates:", error);
+        // Fall back to default rates
+        setRates(currencyRates);
+      }
+    };
+    
+    loadRates();
+  }, []);
   
   // Calculate converted amount when inputs change
   useEffect(() => {
     if (gCoinAmount && selectedCurrency) {
-      const rate = currencyRates[selectedCurrency as keyof typeof currencyRates] || 0;
+      const rate = rates[selectedCurrency] || currencyRates[selectedCurrency] || 0;
       setConvertedAmount(gCoinAmount * rate);
     }
-  }, [gCoinAmount, selectedCurrency]);
+  }, [gCoinAmount, selectedCurrency, rates]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -132,7 +151,7 @@ const Convert = () => {
                     <SelectValue placeholder="Currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(currencyRates).map((currency) => (
+                    {Object.keys(rates).map((currency) => (
                       <SelectItem key={currency} value={currency}>
                         {currency}
                       </SelectItem>
@@ -145,7 +164,7 @@ const Convert = () => {
             <div className="bg-blue-50 rounded-lg p-4 mb-8">
               <h3 className="font-medium text-blue-800 mb-1">Conversion Rate</h3>
               <p className="text-blue-600">
-                1 GCoin = {currencyRates[selectedCurrency as keyof typeof currencyRates]} {selectedCurrency}
+                1 GCoin = {rates[selectedCurrency]} {selectedCurrency}
               </p>
             </div>
             

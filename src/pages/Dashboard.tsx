@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -54,12 +53,16 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchExchangeRate = async () => {
       try {
+        // Get the latest rates - the updated getExchangeRates ensures consistency
         const rates = await getExchangeRates();
         if (rates.NGN) {
           setExchangeRate(rates.NGN);
+          console.log("Updated NGN exchange rate:", rates.NGN);
         }
       } catch (error) {
         console.error("Failed to load exchange rate:", error);
+        // Fall back to our consistent default rate
+        setExchangeRate(currencyRates.NGN);
       }
     };
 

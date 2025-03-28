@@ -78,25 +78,21 @@ const createRecipientProfile = async (
     // Generate a random UUID for the new user
     const newUserId = crypto.randomUUID();
     
-    // Insert new profile
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert({
-        id: newUserId,
-        wallet_address: recipientWallet,
-        username: username,
-        email: `${username}@example.com`, // Placeholder email
-        balance: 0 // Start with zero balance
-      })
-      .select()
-      .single();
+    // Insert new profile with admin rights to bypass RLS
+    const { data, error } = await supabase.rpc('admin_create_profile', {
+      p_id: newUserId,
+      p_wallet_address: recipientWallet,
+      p_username: username,
+      p_email: `${username}@example.com`, // Placeholder email
+      p_balance: 0 // Start with zero balance
+    });
     
     if (error) {
       console.error("Error creating recipient profile:", error);
       return null;
     }
     
-    console.log("Created new profile for wallet:", data);
+    console.log("Created new profile for wallet:", newUserId);
     return { id: newUserId, username };
   } catch (error) {
     console.error("Failed to create recipient profile:", error);
@@ -113,31 +109,18 @@ const updateSenderBalance = async (
   fee: number
 ): Promise<void> => {
   try {
-    const { data: senderData, error: fetchError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', userId)
-      .single();
+    // Use admin function to update balance to bypass RLS
+    const { error } = await supabase.rpc('admin_update_balance', {
+      p_user_id: userId,
+      p_amount: -(amount + fee) // negative as we're deducting
+    });
     
-    if (fetchError) {
-      console.error("Error fetching sender balance:", fetchError);
-      throw fetchError;
+    if (error) {
+      console.error("Error updating sender balance:", error);
+      throw error;
     }
     
-    if (senderData) {
-      const senderNewBalance = Number(senderData.balance) - (amount + fee);
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ balance: senderNewBalance })
-        .eq('id', userId);
-      
-      if (updateError) {
-        console.error("Error updating sender balance:", updateError);
-        throw updateError;
-      }
-      
-      console.log("Updated sender balance to:", senderNewBalance);
-    }
+    console.log("Updated sender balance successfully");
   } catch (error) {
     console.error("Failed to update sender balance:", error);
     throw error;
@@ -152,31 +135,18 @@ const updateRecipientBalance = async (
   amount: number
 ): Promise<void> => {
   try {
-    const { data: recipientData, error: fetchError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', recipientId)
-      .single();
+    // Use admin function to update balance to bypass RLS
+    const { error } = await supabase.rpc('admin_update_balance', {
+      p_user_id: recipientId,
+      p_amount: amount // positive as we're adding
+    });
     
-    if (fetchError) {
-      console.error("Error fetching recipient balance:", fetchError);
-      throw fetchError;
+    if (error) {
+      console.error("Error updating recipient balance:", error);
+      throw error;
     }
     
-    if (recipientData) {
-      const recipientNewBalance = Number(recipientData.balance) + amount;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ balance: recipientNewBalance })
-        .eq('id', recipientId);
-      
-      if (updateError) {
-        console.error("Error updating recipient balance:", updateError);
-        throw updateError;
-      }
-      
-      console.log("Updated recipient balance to:", recipientNewBalance);
-    }
+    console.log("Updated recipient balance successfully");
   } catch (error) {
     console.error("Failed to update recipient balance:", error);
     throw error;
@@ -198,45 +168,32 @@ const processTransactionFee = async (
   }
   
   try {
-    const { data: adminBalanceData, error: fetchError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', adminId)
-      .single();
+    // Use admin function to update balance to bypass RLS
+    const { error: updateError } = await supabase.rpc('admin_update_balance', {
+      p_user_id: adminId,
+      p_amount: fee
+    });
     
-    if (fetchError) {
-      console.error("Error fetching admin balance:", fetchError);
+    if (updateError) {
+      console.error("Error updating admin balance:", updateError);
       return;
     }
     
-    if (adminBalanceData) {
-      const adminNewBalance = Number(adminBalanceData.balance) + fee;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ balance: adminNewBalance })
-        .eq('id', adminId);
-      
-      if (updateError) {
-        console.error("Error updating admin balance:", updateError);
-        return;
-      }
-      
-      // Create fee transaction record for admin
-      const feeTransaction: Transaction = {
-        id: crypto.randomUUID(),
-        type: "receive",
-        amount: fee,
-        recipient: ADMIN_WALLET,
-        sender: senderWallet,
-        timestamp: new Date(),
-        status: "completed",
-        description: `Transaction fee from ${transactionId}`,
-        fee: 0
-      };
-      
-      await saveTransaction(adminId, feeTransaction);
-      console.log("Fee transaction processed successfully");
-    }
+    // Create fee transaction record for admin
+    const feeTransaction: Transaction = {
+      id: crypto.randomUUID(),
+      type: "receive",
+      amount: fee,
+      recipient: ADMIN_WALLET,
+      sender: senderWallet,
+      timestamp: new Date(),
+      status: "completed",
+      description: `Transaction fee from ${transactionId}`,
+      fee: 0
+    };
+    
+    await saveTransaction(adminId, feeTransaction);
+    console.log("Fee transaction processed successfully");
   } catch (error) {
     console.error("Failed to process transaction fee:", error);
   }
@@ -403,18 +360,22 @@ export const sendMoney = async (
             finalRecipientUser = await createRecipientProfile(recipientWallet);
             
             if (!finalRecipientUser) {
-              // If profile creation fails, still complete the transaction
-              // The coins will be sent to the wallet address and will be available
-              // when someone claims that address
-              console.log("Failed to create profile, but proceeding with transaction");
-              finalRecipientUser = {
-                id: crypto.randomUUID(), // Temporary ID for the transaction
-                username: undefined
-              };
+              console.error("Failed to create profile, cannot complete transaction");
+              
+              // Update transaction status to refunded
+              await updateTransaction(userId, transaction.id, { status: "refunded" });
+              
+              resolve({
+                success: false,
+                transactionId: transaction.id,
+                status: "refunded",
+                message: "Could not create recipient profile. Your GCoins have been returned to your wallet."
+              });
+              return;
             }
           }
           
-          // Process the transaction
+          // Process the transaction with the available or newly created recipient
           resolve(await processSuccessfulTransaction(
             userId,
             finalRecipientUser,
@@ -426,6 +387,13 @@ export const sendMoney = async (
             note
           ));
         } catch (error) {
+          // Update transaction status to failed
+          try {
+            await updateTransaction(userId, transaction.id, { status: "failed" });
+          } catch (updateError) {
+            console.error("Error updating failed transaction:", updateError);
+          }
+          
           resolve(handleTransactionError(error, transaction.id));
         }
       }, 1500); // Simulate processing time

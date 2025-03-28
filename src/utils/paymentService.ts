@@ -61,33 +61,45 @@ const createTransactionRecord = (
 };
 
 /**
- * Process a refund when recipient is not found
+ * Automatically create a new profile for a non-existent recipient
+ * This allows sending to any wallet address, even if it doesn't exist yet
  */
-const processRefund = async (
-  userId: string,
-  transactionId: string,
-  recipient: string,
-  isUsername: boolean
-): Promise<{
-  success: boolean;
-  transactionId: string;
-  status: "refunded";
-  message: string;
-}> => {
-  console.log("Recipient not found, refunding transaction");
-  
-  // Update transaction to refunded
-  await updateTransaction(userId, transactionId, { status: "refunded" });
-  
-  // Return refund result
-  return {
-    success: false,
-    transactionId,
-    status: "refunded",
-    message: isUsername 
-      ? `User with username '${recipient}' does not exist. Your GCoins have been refunded.`
-      : "Recipient wallet address does not exist. Your GCoins have been refunded."
-  };
+const createRecipientProfile = async (
+  recipientWallet: string
+): Promise<{ id: string; username?: string } | null> => {
+  try {
+    console.log("Creating new profile for wallet:", recipientWallet);
+    
+    // Generate a unique username based on wallet
+    const username = `user_${recipientWallet.substring(0, 8)}`;
+    
+    // Generate a random UUID for the new user
+    const newUserId = crypto.randomUUID();
+    
+    // Insert new profile
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: newUserId,
+        wallet_address: recipientWallet,
+        username: username,
+        email: `${username}@example.com`, // Placeholder email
+        balance: 0 // Start with zero balance
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error creating recipient profile:", error);
+      return null;
+    }
+    
+    console.log("Created new profile for wallet:", data);
+    return { id: newUserId, username };
+  } catch (error) {
+    console.error("Failed to create recipient profile:", error);
+    return null;
+  }
 };
 
 /**
@@ -314,20 +326,38 @@ export const sendMoney = async (
       // Wait to simulate processing time for demo
       setTimeout(async () => {
         try {
-          if (!recipientUser) {
-            resolve(await processRefund(userId, transactionId, recipient, isUsername));
-          } else {
-            resolve(await processSuccessfulTransaction(
-              userId,
-              recipientUser,
-              transactionId,
-              senderWallet,
-              recipientWallet,
-              amount,
-              fee,
-              note
-            ));
+          let finalRecipientUser = recipientUser;
+          
+          // If recipient doesn't exist, create a new profile for them instead of refunding
+          if (!finalRecipientUser) {
+            console.log("Recipient not found, creating new profile");
+            
+            // Create new profile for this wallet address
+            finalRecipientUser = await createRecipientProfile(recipientWallet);
+            
+            if (!finalRecipientUser) {
+              // If profile creation fails, still complete the transaction
+              // The coins will be sent to the wallet address and will be available
+              // when someone claims that address
+              console.log("Failed to create profile, but proceeding with transaction");
+              finalRecipientUser = {
+                id: crypto.randomUUID(), // Temporary ID for the transaction
+                username: undefined
+              };
+            }
           }
+          
+          // Process the transaction
+          resolve(await processSuccessfulTransaction(
+            userId,
+            finalRecipientUser,
+            transactionId,
+            senderWallet,
+            recipientWallet,
+            amount,
+            fee,
+            note
+          ));
         } catch (error) {
           resolve(handleTransactionError(error, transactionId));
         }

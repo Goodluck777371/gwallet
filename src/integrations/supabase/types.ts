@@ -127,7 +127,44 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_create_profile: {
+        Args: {
+          p_id: string
+          p_wallet_address: string
+          p_username: string
+          p_email: string
+          p_balance?: number
+        }
+        Returns: undefined
+      }
+      admin_insert_transaction: {
+        Args: {
+          transaction_data: Json
+        }
+        Returns: undefined
+      }
+      admin_update_balance: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+        }
+        Returns: undefined
+      }
+      admin_update_exchange_rate: {
+        Args: {
+          p_currency: string
+          p_rate: number
+        }
+        Returns: undefined
+      }
+      admin_update_transaction: {
+        Args: {
+          p_transaction_id: string
+          p_user_id: string
+          p_updates: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
 import { fetchUserByWalletAddress, fetchUserByUsername } from "@/services/profileService";

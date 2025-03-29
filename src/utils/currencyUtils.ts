@@ -10,8 +10,11 @@ export const currencyRates = {
   BTC: 0.000000022 // 1 GCoin = very small amount of BTC
 };
 
+// Define the type for exchange rates
+export type CurrencyRates = typeof currencyRates;
+
 // Fetch the latest exchange rates from our database
-export const getExchangeRates = async (): Promise<typeof currencyRates> => {
+export const getExchangeRates = async (): Promise<CurrencyRates> => {
   try {
     console.log("Fetching exchange rates from database");
     const { data, error } = await supabase
@@ -24,10 +27,10 @@ export const getExchangeRates = async (): Promise<typeof currencyRates> => {
     }
     
     // Convert the array of rates to an object format
-    const rates: Record<string, number> = { ...currencyRates };
+    const rates: CurrencyRates = { ...currencyRates };
     
     for (const rate of data) {
-      rates[rate.currency] = Number(rate.rate);
+      rates[rate.currency as keyof CurrencyRates] = Number(rate.rate);
     }
     
     console.log("Retrieved exchange rates:", rates);
@@ -62,13 +65,13 @@ export const updateExchangeRate = async (currency: string, rate: number): Promis
 };
 
 // Convert GCoin to another currency
-export const convertGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: typeof currencyRates): number => {
+export const convertGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: CurrencyRates): number => {
   const rates = customRates || currencyRates;
   return amount * (rates[currency] || rates.NGN);
 };
 
 // Convert from another currency to GCoin
-export const convertToGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: typeof currencyRates): number => {
+export const convertToGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: CurrencyRates): number => {
   const rates = customRates || currencyRates;
   const rate = rates[currency] || rates.NGN;
   return rate ? amount / rate : 0;

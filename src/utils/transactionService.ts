@@ -24,8 +24,10 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
       related_transaction_id: transaction.relatedTransactionId
     };
     
-    // First remove any RLS policies for this operation
-    const { error } = await supabase.rpc('admin_insert_transaction', {
+    console.log("Transaction data being sent to Supabase:", transactionData);
+    
+    // Insert transaction using admin function to bypass RLS
+    const { error, data } = await supabase.rpc('admin_insert_transaction', {
       transaction_data: transactionData
     });
     
@@ -35,6 +37,7 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
     }
     
     console.log("Transaction saved successfully:", transaction.id);
+    return data;
   } catch (error) {
     console.error("Failed to save transaction:", error);
     throw error; // Re-throw to allow handling by calling function
@@ -55,7 +58,9 @@ export const updateTransaction = async (userId: string, transactionId: string, u
     if (updates.description) updateData.description = updates.description;
     // Add other fields that can be updated as needed
     
-    const { error } = await supabase.rpc('admin_update_transaction', {
+    console.log("Update data being sent to Supabase:", updateData);
+    
+    const { error, data } = await supabase.rpc('admin_update_transaction', {
       p_transaction_id: transactionId,
       p_user_id: userId,
       p_updates: updateData
@@ -67,6 +72,7 @@ export const updateTransaction = async (userId: string, transactionId: string, u
     }
     
     console.log("Transaction updated successfully:", transactionId);
+    return data;
   } catch (error) {
     console.error("Failed to update transaction:", error);
     throw error; // Re-throw to allow handling by calling function
@@ -91,9 +97,9 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
       throw error;
     }
     
-    console.log(`Retrieved ${data.length} transactions for user:`, userId);
+    console.log(`Retrieved ${data?.length || 0} transactions for user:`, userId);
     
-    return data.map((item: any) => ({
+    return (data || []).map((item: any) => ({
       id: item.id,
       type: item.type,
       amount: Number(item.amount),
@@ -102,7 +108,7 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
       timestamp: new Date(item.timestamp),
       status: item.status,
       description: item.description,
-      fee: Number(item.fee),
+      fee: Number(item.fee || 0),
       relatedTransactionId: item.related_transaction_id
     }));
   } catch (error) {

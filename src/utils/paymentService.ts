@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
 import { fetchUserByWalletAddress, fetchUserByUsername } from "@/services/profileService";
@@ -108,6 +109,8 @@ const updateSenderBalance = async (
   fee: number
 ): Promise<void> => {
   try {
+    console.log(`Updating sender (${userId}) balance: -${amount + fee}`);
+    
     // Use admin function to update balance to bypass RLS
     const { error } = await supabase.rpc('admin_update_balance', {
       p_user_id: userId,
@@ -134,6 +137,8 @@ const updateRecipientBalance = async (
   amount: number
 ): Promise<void> => {
   try {
+    console.log(`Updating recipient (${recipientId}) balance: +${amount}`);
+    
     // Use admin function to update balance to bypass RLS
     const { error } = await supabase.rpc('admin_update_balance', {
       p_user_id: recipientId,
@@ -167,6 +172,8 @@ const processTransactionFee = async (
   }
   
   try {
+    console.log(`Processing fee (${fee}) to admin account (${adminId})`);
+    
     // Use admin function to update balance to bypass RLS
     const { error: updateError } = await supabase.rpc('admin_update_balance', {
       p_user_id: adminId,
@@ -210,6 +217,8 @@ const createRecipientTransaction = async (
   note?: string
 ): Promise<void> => {
   try {
+    console.log(`Creating recipient (${recipientId}) transaction record for amount ${amount}`);
+    
     const recipientTransaction: Transaction = {
       id: crypto.randomUUID(), // Generate a unique ID for the recipient's transaction
       type: "receive",
@@ -329,8 +338,12 @@ export const sendMoney = async (
 }> => {
   return new Promise(async (resolve) => {
     try {
+      console.log(`Starting money transfer: ${amount} from ${senderWallet} to ${recipient} (isUsername: ${isUsername})`);
+      
       // Get the actual wallet address if recipient is a username
       const { recipientWallet, recipientUser } = await findRecipient(recipient, isUsername);
+      
+      console.log("Recipient lookup result:", { recipientWallet, recipientUser });
       
       // Create transaction object with proper UUID format
       const transaction = createTransactionRecord(
@@ -340,6 +353,8 @@ export const sendMoney = async (
         fee,
         note
       );
+      
+      console.log("Created transaction record:", transaction);
       
       // Save the initial pending transaction
       await saveTransaction(userId, transaction);
@@ -374,8 +389,10 @@ export const sendMoney = async (
             }
           }
           
+          console.log("Final recipient user:", finalRecipientUser);
+          
           // Process the transaction with the available or newly created recipient
-          resolve(await processSuccessfulTransaction(
+          const result = await processSuccessfulTransaction(
             userId,
             finalRecipientUser,
             transaction.id,
@@ -384,8 +401,14 @@ export const sendMoney = async (
             amount,
             fee,
             note
-          ));
+          );
+          
+          console.log("Transaction processed with result:", result);
+          
+          resolve(result);
         } catch (error) {
+          console.error("Error during transaction processing:", error);
+          
           // Update transaction status to failed
           try {
             await updateTransaction(userId, transaction.id, { status: "failed" });

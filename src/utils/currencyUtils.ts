@@ -1,73 +1,75 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Export updated currency rates for use throughout the app
-// These are the default fallback rates if DB rates can't be loaded
-export const currencyRates: Record<string, number> = {
-  USD: 1001.2,
-  EUR: 925.4,
-  GBP: 785.3,
-  NGN: 1430342.8, // Updated to match the rate in Convert page
-  JPY: 152382.4,
-  CAD: 1362.8,
-  AUD: 1496.7,
-  GHS: 12354.7
+// Default exchange rates (fallback if API is down)
+export const currencyRates = {
+  USD: 0.00066,  // 1 GCoin = ~1500 USD
+  NGN: 1000,     // 1 GCoin = 1000 NGN
+  EUR: 0.00062,  // 1 GCoin = ~1600 EUR
+  GBP: 0.00053,  // 1 GCoin = ~1900 GBP
+  BTC: 0.000000022 // 1 GCoin = very small amount of BTC
 };
 
-/**
- * Get exchange rates from Supabase
- */
-export const getExchangeRates = async (): Promise<Record<string, number>> => {
+// Fetch the latest exchange rates from our database
+export const getExchangeRates = async (): Promise<typeof currencyRates> => {
   try {
+    console.log("Fetching exchange rates from database");
     const { data, error } = await supabase
       .from('exchange_rates')
       .select('currency, rate');
     
     if (error) {
-      throw error;
+      console.error("Error fetching exchange rates:", error);
+      return currencyRates; // Return default rates on error
     }
     
-    // Convert to dictionary format
-    const rates: Record<string, number> = {};
-    data.forEach((item: any) => {
-      rates[item.currency] = Number(item.rate);
-    });
+    // Convert the array of rates to an object format
+    const rates: Record<string, number> = { ...currencyRates };
     
-    // Make sure rates are consistent across the app
-    // If NGN rate is missing or different from our default, update it
-    if (!rates.NGN || rates.NGN !== currencyRates.NGN) {
-      // Try to update the database rate to match our default
-      try {
-        await supabase.rpc('admin_update_exchange_rate', {
-          p_currency: 'NGN',
-          p_rate: currencyRates.NGN
-        });
-      } catch (updateError) {
-        console.error("Failed to update NGN exchange rate in database:", updateError);
-      }
-      
-      // Use our default rate regardless
-      rates.NGN = currencyRates.NGN;
+    for (const rate of data) {
+      rates[rate.currency] = Number(rate.rate);
     }
     
-    console.log("Loaded exchange rates:", rates);
+    console.log("Retrieved exchange rates:", rates);
     return rates;
   } catch (error) {
     console.error("Failed to load exchange rates:", error);
-    // Return default rates as fallback
-    return currencyRates;
+    return currencyRates; // Return default rates on error
   }
 };
 
-/**
- * Convert GCoin to another currency using rates from Supabase
- */
-export const convertGCoin = async (amount: number, currency: string): Promise<number> => {
+// Update the exchange rate for a currency in our database
+export const updateExchangeRate = async (currency: string, rate: number): Promise<boolean> => {
   try {
-    const rates = await getExchangeRates();
-    return amount * (rates[currency] || currencyRates.USD);
+    console.log(`Updating exchange rate for ${currency} to ${rate}`);
+    // Use the admin RPC function to update the rate
+    const { error } = await supabase.rpc('admin_update_exchange_rate', {
+      p_currency: currency,
+      p_rate: rate
+    });
+    
+    if (error) {
+      console.error("Error updating exchange rate:", error);
+      return false;
+    }
+    
+    console.log(`Exchange rate for ${currency} updated successfully`);
+    return true;
   } catch (error) {
-    console.error("Error converting GCoin:", error);
-    return amount * currencyRates.USD; // Fallback to default rate
+    console.error("Failed to update exchange rate:", error);
+    return false;
   }
+};
+
+// Convert GCoin to another currency
+export const convertGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: typeof currencyRates): number => {
+  const rates = customRates || currencyRates;
+  return amount * (rates[currency] || rates.NGN);
+};
+
+// Convert from another currency to GCoin
+export const convertToGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: typeof currencyRates): number => {
+  const rates = customRates || currencyRates;
+  const rate = rates[currency] || rates.NGN;
+  return rate ? amount / rate : 0;
 };

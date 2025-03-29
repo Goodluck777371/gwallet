@@ -107,7 +107,7 @@ const updateSenderBalance = async (
   userId: string,
   amount: number,
   fee: number
-): Promise<void> => {
+): Promise<boolean> => {
   try {
     console.log(`Updating sender (${userId}) balance: -${amount + fee}`);
     
@@ -123,6 +123,7 @@ const updateSenderBalance = async (
     }
     
     console.log("Updated sender balance successfully");
+    return true;
   } catch (error) {
     console.error("Failed to update sender balance:", error);
     throw error;
@@ -135,7 +136,7 @@ const updateSenderBalance = async (
 const updateRecipientBalance = async (
   recipientId: string,
   amount: number
-): Promise<void> => {
+): Promise<boolean> => {
   try {
     console.log(`Updating recipient (${recipientId}) balance: +${amount}`);
     
@@ -151,6 +152,7 @@ const updateRecipientBalance = async (
     }
     
     console.log("Updated recipient balance successfully");
+    return true;
   } catch (error) {
     console.error("Failed to update recipient balance:", error);
     throw error;
@@ -165,10 +167,10 @@ const processTransactionFee = async (
   fee: number,
   senderWallet: string,
   transactionId: string
-): Promise<void> => {
+): Promise<boolean> => {
   if (!adminId) {
     console.log("No admin account found for fee processing");
-    return;
+    return false;
   }
   
   try {
@@ -182,7 +184,7 @@ const processTransactionFee = async (
     
     if (updateError) {
       console.error("Error updating admin balance:", updateError);
-      return;
+      return false;
     }
     
     // Create fee transaction record for admin
@@ -200,8 +202,10 @@ const processTransactionFee = async (
     
     await saveTransaction(adminId, feeTransaction);
     console.log("Fee transaction processed successfully");
+    return true;
   } catch (error) {
     console.error("Failed to process transaction fee:", error);
+    return false;
   }
 };
 
@@ -215,7 +219,7 @@ const createRecipientTransaction = async (
   senderWallet: string,
   transactionId: string,
   note?: string
-): Promise<void> => {
+): Promise<boolean> => {
   try {
     console.log(`Creating recipient (${recipientId}) transaction record for amount ${amount}`);
     
@@ -234,6 +238,7 @@ const createRecipientTransaction = async (
     
     await saveTransaction(recipientId, recipientTransaction);
     console.log("Created receipt transaction for recipient");
+    return true;
   } catch (error) {
     console.error("Failed to create recipient transaction:", error);
     throw error;
@@ -269,17 +274,24 @@ const processSuccessfulTransaction = async (
     
     const adminId = adminData ? adminData.id : null;
     
+    // Execute all operations in sequence, ensuring each step completes
+    
     // 1. Update sender's balance first
-    await updateSenderBalance(userId, amount, fee);
+    const senderUpdated = await updateSenderBalance(userId, amount, fee);
+    if (!senderUpdated) throw new Error("Failed to update sender balance");
     
     // 2. Update recipient's balance
-    await updateRecipientBalance(recipientUser.id, amount);
+    const recipientUpdated = await updateRecipientBalance(recipientUser.id, amount);
+    if (!recipientUpdated) throw new Error("Failed to update recipient balance");
     
     // 3. Process transaction fee
     await processTransactionFee(adminId, fee, senderWallet, transactionId);
     
     // 4. Create recipient's transaction record with reference to original transaction
-    await createRecipientTransaction(recipientUser.id, amount, recipientWallet, senderWallet, transactionId, note);
+    const recipientTxCreated = await createRecipientTransaction(
+      recipientUser.id, amount, recipientWallet, senderWallet, transactionId, note
+    );
+    if (!recipientTxCreated) throw new Error("Failed to create recipient transaction");
     
     // 5. Update original transaction to completed
     await updateTransaction(userId, transactionId, { status: "completed" });
@@ -294,6 +306,15 @@ const processSuccessfulTransaction = async (
     };
   } catch (error) {
     console.error("Error during successful transaction processing:", error);
+    // Attempt to update transaction status to failed
+    try {
+      await updateTransaction(userId, transactionId, { 
+        status: "failed", 
+        description: `Failed transaction: ${error.message}`
+      });
+    } catch (updateError) {
+      console.error("Error updating transaction status:", updateError);
+    }
     throw error;
   }
 };
@@ -315,7 +336,7 @@ const handleTransactionError = (
     success: false,
     transactionId,
     status: "failed",
-    message: "An error occurred during the transaction. Please try again."
+    message: error.message || "An error occurred during the transaction. Please try again."
   };
 };
 
@@ -411,7 +432,10 @@ export const sendMoney = async (
           
           // Update transaction status to failed
           try {
-            await updateTransaction(userId, transaction.id, { status: "failed" });
+            await updateTransaction(userId, transaction.id, { 
+              status: "failed",
+              description: `Failed: ${error.message || "Unknown error"}`
+            });
           } catch (updateError) {
             console.error("Error updating failed transaction:", updateError);
           }
@@ -425,7 +449,7 @@ export const sendMoney = async (
         success: false,
         transactionId: crypto.randomUUID(),
         status: "failed",
-        message: "Failed to initiate transaction. Please try again."
+        message: error.message || "Failed to initiate transaction. Please try again."
       });
     }
   });

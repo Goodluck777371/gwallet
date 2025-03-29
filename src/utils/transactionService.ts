@@ -5,7 +5,7 @@ import { Transaction } from "@/components/TransactionItem";
 /**
  * Save a new transaction to the user's transaction history using Supabase
  */
-export const saveTransaction = async (userId: string, transaction: Transaction): Promise<void> => {
+export const saveTransaction = async (userId: string, transaction: Transaction): Promise<boolean> => {
   try {
     console.log("Saving transaction for user:", userId, transaction);
     
@@ -37,7 +37,7 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
     }
     
     console.log("Transaction saved successfully:", transaction.id);
-    return data;
+    return true;
   } catch (error) {
     console.error("Failed to save transaction:", error);
     throw error; // Re-throw to allow handling by calling function
@@ -47,7 +47,7 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
 /**
  * Update an existing transaction (e.g., to change status from pending to completed)
  */
-export const updateTransaction = async (userId: string, transactionId: string, updates: Partial<Transaction>): Promise<void> => {
+export const updateTransaction = async (userId: string, transactionId: string, updates: Partial<Transaction>): Promise<boolean> => {
   try {
     console.log("Updating transaction:", transactionId, updates);
     
@@ -72,7 +72,7 @@ export const updateTransaction = async (userId: string, transactionId: string, u
     }
     
     console.log("Transaction updated successfully:", transactionId);
-    return data;
+    return true;
   } catch (error) {
     console.error("Failed to update transaction:", error);
     throw error; // Re-throw to allow handling by calling function
@@ -114,5 +114,42 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
   } catch (error) {
     console.error("Failed to load transactions:", error);
     return [];
+  }
+};
+
+/**
+ * Verify a transaction exists and has the expected status
+ */
+export const verifyTransaction = async (userId: string, transactionId: string, expectedStatus?: string): Promise<boolean> => {
+  try {
+    console.log(`Verifying transaction ${transactionId} for user ${userId}`);
+    
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, status')
+      .eq('id', transactionId)
+      .eq('user_id', userId)
+      .single();
+    
+    if (error) {
+      console.error("Error verifying transaction:", error);
+      return false;
+    }
+    
+    if (!data) {
+      console.log(`Transaction ${transactionId} not found for user ${userId}`);
+      return false;
+    }
+    
+    if (expectedStatus && data.status !== expectedStatus) {
+      console.log(`Transaction ${transactionId} has status ${data.status}, expected ${expectedStatus}`);
+      return false;
+    }
+    
+    console.log(`Transaction ${transactionId} verified successfully`);
+    return true;
+  } catch (error) {
+    console.error("Failed to verify transaction:", error);
+    return false;
   }
 };

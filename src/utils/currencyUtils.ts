@@ -65,13 +65,13 @@ export const updateExchangeRate = async (currency: string, rate: number): Promis
 };
 
 // Convert GCoin to another currency
-export const convertGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: CurrencyRates): number => {
+export const convertGCoin = (amount: number, currency: keyof CurrencyRates = 'NGN', customRates?: CurrencyRates): number => {
   const rates = customRates || currencyRates;
   return amount * (rates[currency] || rates.NGN);
 };
 
 // Convert from another currency to GCoin
-export const convertToGCoin = (amount: number, currency: keyof typeof currencyRates = 'NGN', customRates?: CurrencyRates): number => {
+export const convertToGCoin = (amount: number, currency: keyof CurrencyRates = 'NGN', customRates?: CurrencyRates): number => {
   const rates = customRates || currencyRates;
   const rate = rates[currency] || rates.NGN;
   return rate ? amount / rate : 0;

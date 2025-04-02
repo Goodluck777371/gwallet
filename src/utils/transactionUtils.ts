@@ -20,13 +20,19 @@ export const getRecipientStatus = async (identifier: string, isUsername: boolean
 }> => {
   try {
     if (isUsername) {
-      const exists = await checkUsernameExists(identifier);
+      // Import the function directly from transactionService to avoid circular reference
+      const exists = await import('./transactionService').then(module => 
+        module.checkUsernameExists(identifier)
+      );
       return {
         exists,
         message: exists ? 'Username found' : 'Username not found',
       };
     } else {
-      const exists = await checkRecipientExists(identifier);
+      // Import the function directly from transactionService to avoid circular reference
+      const exists = await import('./transactionService').then(module => 
+        module.checkRecipientExists(identifier)
+      );
       return {
         exists,
         message: exists ? 'Wallet address found' : 'Wallet address not found',

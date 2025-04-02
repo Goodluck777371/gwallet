@@ -21,6 +21,7 @@ import P2P from "./pages/P2P";
 import Blog from "./pages/Blog";
 import Admin from "./pages/Admin";
 import BlogEditor from "./pages/BlogEditor";
+import CustomerCare from "./pages/CustomerCare";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const AppRoutes = () => (
     <Route path="/convert" element={<ProtectedRoute><Convert /></ProtectedRoute>} />
     <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
     <Route path="/blog" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
+    <Route path="/customer-care" element={<ProtectedRoute><CustomerCare /></ProtectedRoute>} />
     <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
     <Route path="/admin/blog/editor" element={<AdminRoute><BlogEditor /></AdminRoute>} />
     <Route path="*" element={<NotFound />} />

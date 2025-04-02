@@ -27,7 +27,7 @@ export const saveTransaction = async (userId: string, transaction: Transaction):
     console.log("Transaction data being sent to Supabase:", transactionData);
     
     // Insert transaction using admin function to bypass RLS
-    const { error, data } = await supabase.rpc('admin_insert_transaction', {
+    const { error } = await supabase.rpc('admin_insert_transaction', {
       transaction_data: transactionData
     });
     
@@ -60,7 +60,7 @@ export const updateTransaction = async (userId: string, transactionId: string, u
     
     console.log("Update data being sent to Supabase:", updateData);
     
-    const { error, data } = await supabase.rpc('admin_update_transaction', {
+    const { error } = await supabase.rpc('admin_update_transaction', {
       p_transaction_id: transactionId,
       p_user_id: userId,
       p_updates: updateData
@@ -150,6 +150,52 @@ export const verifyTransaction = async (userId: string, transactionId: string, e
     return true;
   } catch (error) {
     console.error("Failed to verify transaction:", error);
+    return false;
+  }
+};
+
+/**
+ * Check if a recipient exists by wallet address
+ */
+export const checkRecipientExists = async (walletAddress: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('wallet_address', walletAddress)
+      .single();
+    
+    if (error) {
+      console.error("Error checking recipient:", error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error("Failed to check recipient:", error);
+    return false;
+  }
+};
+
+/**
+ * Check if a recipient exists by username
+ */
+export const checkUsernameExists = async (username: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .single();
+    
+    if (error) {
+      console.error("Error checking username:", error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error("Failed to check username:", error);
     return false;
   }
 };

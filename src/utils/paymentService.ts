@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/components/TransactionItem";
-import { fetchUserByWalletAddress, fetchUserByUsername } from "@/services/profileService";
+import { fetchUserByWalletAddress, fetchUserByUsername, fetchAllWalletAddresses } from "@/services/profileService";
 import { saveTransaction, updateTransaction } from "./transactionService";
 import { checkRecipientExists, checkUsernameExists } from "./transactionService";
 
@@ -29,13 +29,20 @@ const standardizeWalletAddress = (wallet: string): string => {
 
 /**
  * Attempts to find the recipient user by either username or wallet address
+ * Now with improved wallet address matching and suggestions
  */
 const findRecipient = async (
   recipient: string,
-  isUsername: boolean
-): Promise<{ recipientWallet: string; recipientUser: { id: string; username?: string } | null }> => {
+  isUsername: boolean,
+  senderWallet: string
+): Promise<{ 
+  recipientWallet: string; 
+  recipientUser: { id: string; username?: string } | null;
+  suggestedWallets?: string[];
+}> => {
   let recipientWallet = recipient;
   let recipientUser: { id: string; username?: string } | null = null;
+  let suggestedWallets: string[] = [];
   
   // For wallet addresses, ensure they are in the correct format
   if (!isUsername) {
@@ -60,21 +67,34 @@ const findRecipient = async (
     // If not found, try a fuzzy match by querying similar wallets
     if (!recipientUser) {
       try {
-        // Get all wallet addresses
+        // Get all wallet addresses except the sender's
         const { data: wallets } = await supabase
           .from('profiles')
           .select('id, wallet_address, username')
-          .ilike('wallet_address', `%${recipientWallet.substring(5)}%`); // Match partial wallet ID
+          .neq('wallet_address', senderWallet) // Exclude sender's wallet
+          .order('wallet_address', { ascending: true });
         
         if (wallets && wallets.length > 0) {
-          // Use the first close match
-          const closestMatch = wallets[0];
-          recipientWallet = closestMatch.wallet_address;
-          recipientUser = { 
-            id: closestMatch.id, 
-            username: closestMatch.username 
-          };
-          console.log("Found similar wallet:", recipientWallet);
+          // Sort by similarity to the input
+          const sortedWallets = wallets.sort((a, b) => {
+            const aScore = getSimilarityScore(recipientWallet, a.wallet_address);
+            const bScore = getSimilarityScore(recipientWallet, b.wallet_address);
+            return bScore - aScore; // Higher score first
+          });
+          
+          // Use the first close match if similarity is good enough
+          if (sortedWallets.length > 0 && getSimilarityScore(recipientWallet, sortedWallets[0].wallet_address) > 0.3) {
+            const closestMatch = sortedWallets[0];
+            recipientWallet = closestMatch.wallet_address;
+            recipientUser = { 
+              id: closestMatch.id, 
+              username: closestMatch.username 
+            };
+            console.log("Found similar wallet:", recipientWallet);
+          }
+          
+          // Store top 3 suggestions
+          suggestedWallets = sortedWallets.slice(0, 3).map(w => w.wallet_address);
         }
       } catch (err) {
         console.error("Error during fuzzy wallet lookup:", err);
@@ -82,7 +102,38 @@ const findRecipient = async (
     }
   }
   
-  return { recipientWallet, recipientUser };
+  return { recipientWallet, recipientUser, suggestedWallets };
+};
+
+/**
+ * Calculate similarity score between two wallet addresses
+ * Higher score means more similar
+ */
+const getSimilarityScore = (wallet1: string, wallet2: string): number => {
+  // Base case - exact match
+  if (wallet1 === wallet2) return 1.0;
+  
+  // Both must be valid wallet addresses
+  if (!wallet1 || !wallet2 || !wallet1.startsWith('gCoin') || !wallet2.startsWith('gCoin')) {
+    return 0;
+  }
+  
+  // Extract the parts after 'gCoin'
+  const part1 = wallet1.substring(5);
+  const part2 = wallet2.substring(5);
+  
+  // Count matching characters
+  let matches = 0;
+  for (let i = 0; i < Math.min(part1.length, part2.length); i++) {
+    if (part1[i] === part2[i]) matches++;
+  }
+  
+  // Calculate score based on matching characters and length difference
+  const lengthDifference = Math.abs(part1.length - part2.length);
+  const lengthPenalty = lengthDifference / Math.max(part1.length, part2.length);
+  
+  const matchScore = matches / Math.max(part1.length, part2.length);
+  return matchScore * (1 - lengthPenalty);
 };
 
 /**
@@ -391,6 +442,7 @@ const handleTransactionError = (
 
 /**
  * Send money to another wallet and track the transaction
+ * Now with improved wallet validation and suggestions
  */
 export const sendMoney = async (
   userId: string,
@@ -405,6 +457,7 @@ export const sendMoney = async (
   transactionId: string;
   status: "completed" | "pending" | "failed" | "refunded";
   message?: string;
+  suggestedWallets?: string[];
 }> => {
   try {
     console.log(`Starting money transfer: ${amount} from ${senderWallet} to ${recipient} (isUsername: ${isUsername})`);
@@ -428,34 +481,42 @@ export const sendMoney = async (
     }
     
     // Get the actual wallet address if recipient is a username
-    const { recipientWallet, recipientUser } = await findRecipient(recipient, isUsername);
+    const { recipientWallet, recipientUser, suggestedWallets } = await findRecipient(
+      recipient, 
+      isUsername,
+      senderWallet
+    );
     
-    console.log("Recipient lookup result:", { recipientWallet, recipientUser });
+    console.log("Recipient lookup result:", { recipientWallet, recipientUser, suggestedWallets });
     
     // Early validation to prevent refunds later
-    if (!recipientUser && !isUsername) {
-      // Check if the wallet address exists before proceeding
-      const exists = await checkRecipientExists(recipientWallet);
-      if (!exists) {
-        // Look for similar wallets as suggestions
-        try {
-          const { data: wallets } = await supabase
-            .from('profiles')
-            .select('wallet_address')
-            .limit(3);
-            
-          const suggestions = wallets && wallets.length > 0 
-            ? wallets.map(w => w.wallet_address).join(', ')
-            : "none found";
-          
+    if (!recipientUser) {
+      if (isUsername) {
+        // Check if the username exists
+        const exists = await checkUsernameExists(recipient);
+        if (!exists) {
           return {
             success: false,
             transactionId: crypto.randomUUID(),
             status: "failed",
-            message: `Recipient wallet address not found. Please check and try again. Available wallet addresses: ${suggestions}`
+            message: "Username does not exist. Please check and try again.",
           };
-        } catch (err) {
-          console.error("Error finding similar wallets:", err);
+        }
+      } else {
+        // Check if the wallet address exists
+        const exists = await checkRecipientExists(recipientWallet);
+        if (!exists) {
+          // Return suggestions if available
+          if (suggestedWallets && suggestedWallets.length > 0) {
+            return {
+              success: false,
+              transactionId: crypto.randomUUID(),
+              status: "failed",
+              message: `Recipient wallet address not found. Did you mean one of these?`,
+              suggestedWallets
+            };
+          }
+          
           return {
             success: false,
             transactionId: crypto.randomUUID(),
@@ -463,19 +524,6 @@ export const sendMoney = async (
             message: "Recipient wallet address does not exist. Please check and try again."
           };
         }
-      }
-    }
-    
-    if (!recipientUser && isUsername) {
-      // Check if the username exists before proceeding
-      const exists = await checkUsernameExists(recipient);
-      if (!exists) {
-        return {
-          success: false,
-          transactionId: crypto.randomUUID(),
-          status: "failed",
-          message: "Username does not exist. Please check and try again."
-        };
       }
     }
     

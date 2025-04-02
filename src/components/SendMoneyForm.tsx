@@ -83,6 +83,9 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     note?: string;
     isUsername?: boolean;
   } | null>(null);
+  
+  // Add state for suggested wallets
+  const [suggestedWallets, setSuggestedWallets] = useState<string[]>([]);
 
   // Fetch real wallet addresses and usernames
   useEffect(() => {
@@ -140,6 +143,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     message: string;
     isValid: boolean;
     isChecking: boolean;
+    suggestedWallets?: string[];
   }>({
     message: "",
     isValid: false,
@@ -160,6 +164,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
           isValid: false,
           isChecking: false
         });
+        setSuggestedWallets([]);
         return;
       }
       
@@ -174,8 +179,16 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
         setRecipientValidation({
           message: result.message,
           isValid: result.exists,
-          isChecking: false
+          isChecking: false,
+          suggestedWallets: result.suggestedWallets
         });
+        
+        // Update suggested wallets state
+        if (result.suggestedWallets && result.suggestedWallets.length > 0) {
+          setSuggestedWallets(result.suggestedWallets);
+        } else {
+          setSuggestedWallets([]);
+        }
       } catch (error) {
         console.error("Validation error:", error);
         setRecipientValidation({
@@ -183,6 +196,7 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
           isValid: false,
           isChecking: false
         });
+        setSuggestedWallets([]);
       }
     };
     
@@ -193,6 +207,11 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     addressForm.watch("recipient"), 
     usernameForm.watch("recipient")
   ]);
+
+  // Function to select a suggested wallet
+  const selectSuggestedWallet = (wallet: string) => {
+    addressForm.setValue("recipient", wallet);
+  };
 
   const handleTabChange = (value: string) => {
     setActiveTab(value as "address" | "username");
@@ -383,6 +402,27 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                         }`}>
                           {recipientValidation.message}
                         </span>
+                      )}
+                      
+                      {/* Display suggested wallets */}
+                      {suggestedWallets.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600 mb-1">Suggested wallet addresses:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {suggestedWallets.map((wallet, index) => (
+                              <Button 
+                                key={index} 
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-xs py-1 h-auto"
+                                onClick={() => selectSuggestedWallet(wallet)}
+                              >
+                                {wallet.substring(0, 6)}...{wallet.substring(wallet.length - 4)}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </FormDescription>
                     <FormMessage />

@@ -17,6 +17,7 @@ export const getRecipientStatus = async (identifier: string, isUsername: boolean
   message: string;
   walletAddress?: string;
   userId?: string;
+  suggestedWallets?: string[];
 }> => {
   try {
     if (isUsername) {
@@ -44,19 +45,24 @@ export const getRecipientStatus = async (identifier: string, isUsername: boolean
         module.checkRecipientExists(identifier)
       );
       
-      // If wallet doesn't exist, suggest a similar wallet that does exist
+      // If wallet doesn't exist, get a list of similar wallets
+      let suggestedWallets: string[] = [];
+      
       if (!exists) {
         try {
-          // Get all wallet addresses to find similar ones
+          // Get all wallet addresses except the current user's wallet
           const { data: profiles } = await import('@/integrations/supabase/client').then(
-            module => module.supabase.from('profiles').select('wallet_address')
+            module => module.supabase
+              .from('profiles')
+              .select('wallet_address')
+              .neq('wallet_address', identifier) // Exclude the entered wallet
           );
           
           if (profiles && profiles.length > 0) {
-            // Find a similar wallet address if possible (for demonstration)
-            const similarWallets = profiles
+            // Find a similar wallet address if possible
+            suggestedWallets = profiles
               .map(p => p.wallet_address)
-              .filter(w => w.startsWith('gCoin'))
+              .filter(w => w && w.startsWith('gCoin'))
               .sort((a, b) => {
                 // Simple similarity score based on common characters
                 const commonA = [...identifier].filter(char => a.includes(char)).length;
@@ -65,11 +71,12 @@ export const getRecipientStatus = async (identifier: string, isUsername: boolean
               })
               .slice(0, 3);
               
-            if (similarWallets.length > 0) {
+            if (suggestedWallets.length > 0) {
               return {
                 exists: false,
-                message: `Wallet address not found. Did you mean: ${similarWallets[0]}?`,
-                walletAddress: undefined
+                message: `Wallet address not found. Did you mean one of these? ${suggestedWallets[0]}, ${suggestedWallets.length > 1 ? suggestedWallets[1] : ''}`,
+                walletAddress: undefined,
+                suggestedWallets
               };
             }
           }
@@ -81,7 +88,8 @@ export const getRecipientStatus = async (identifier: string, isUsername: boolean
       return {
         exists,
         message: exists ? 'Wallet address found' : 'Wallet address not found. Please check and try again.',
-        walletAddress: exists ? identifier : undefined
+        walletAddress: exists ? identifier : undefined,
+        suggestedWallets: suggestedWallets.length > 0 ? suggestedWallets : undefined
       };
     }
   } catch (error) {

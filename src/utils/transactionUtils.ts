@@ -10,6 +10,11 @@ export {
   checkUsernameExists
 } from './transactionService';
 export { sendMoney } from './paymentService';
+export { isValidWalletFormat, standardizeWalletAddress, getSimilarityScore } from './walletUtils';
+export { findRecipient, createRecipientProfile } from './recipientUtils';
+export { createTransactionRecord, handleTransactionError, ADMIN_WALLET } from './transactionRecordUtils';
+export { updateSenderBalance, updateRecipientBalance, processTransactionFee } from './balanceUtils';
+export { processSuccessfulTransaction } from './transactionProcessor';
 
 // Add a new lookup function to fix recipient validation issues
 export const getRecipientStatus = async (identifier: string, isUsername: boolean): Promise<{

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
 import { sendMoney } from "@/utils/paymentService";
 import { fetchAllWalletAddresses, fetchAllUsernames } from "@/services/profileService";
+import { getRecipientStatus } from "@/utils/transactionUtils";
 
 const recipientAddressSchema = z.object({
   recipient: z.string().min(8, {
@@ -135,8 +135,73 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
   }, [currentAmount]);
 
+  // Add new state for validation feedback
+  const [recipientValidation, setRecipientValidation] = useState<{
+    message: string;
+    isValid: boolean;
+    isChecking: boolean;
+  }>({
+    message: "",
+    isValid: false,
+    isChecking: false
+  });
+
+  // Add debounced validation for recipient
+  useEffect(() => {
+    const validateRecipient = async () => {
+      const currentTab = activeTab;
+      const currentValue = currentTab === "address" ? 
+        addressForm.getValues("recipient") : 
+        usernameForm.getValues("recipient");
+      
+      if (!currentValue || currentValue.length < (currentTab === "address" ? 8 : 3)) {
+        setRecipientValidation({
+          message: "",
+          isValid: false,
+          isChecking: false
+        });
+        return;
+      }
+      
+      setRecipientValidation(prev => ({ ...prev, isChecking: true }));
+      
+      try {
+        const result = await getRecipientStatus(
+          currentValue, 
+          currentTab === "username"
+        );
+        
+        setRecipientValidation({
+          message: result.message,
+          isValid: result.exists,
+          isChecking: false
+        });
+      } catch (error) {
+        console.error("Validation error:", error);
+        setRecipientValidation({
+          message: "Error validating recipient",
+          isValid: false,
+          isChecking: false
+        });
+      }
+    };
+    
+    const timeoutId = setTimeout(validateRecipient, 500);
+    return () => clearTimeout(timeoutId);
+  }, [
+    activeTab, 
+    addressForm.watch("recipient"), 
+    usernameForm.watch("recipient")
+  ]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value as "address" | "username");
+    // Reset validation when changing tabs
+    setRecipientValidation({
+      message: "",
+      isValid: false,
+      isChecking: false
+    });
   };
 
   const processTransaction = async (values: z.infer<typeof recipientAddressSchema | typeof recipientUsernameSchema>, isUsername: boolean) => {
@@ -294,14 +359,31 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                   <FormItem>
                     <FormLabel>Recipient Address</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter wallet address"
-                        autoComplete="off"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Enter wallet address"
+                          autoComplete="off"
+                          className={recipientValidation.message ? 
+                            (recipientValidation.isValid ? "border-green-500 focus:ring-green-500" : "border-orange-500 focus:ring-orange-500") 
+                            : ""}
+                          {...field}
+                        />
+                        {recipientValidation.isChecking && (
+                          <div className="absolute right-3 top-2.5">
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
-                    <FormDescription>
-                      Enter the GCoin wallet address of the recipient.
+                    <FormDescription className="flex flex-col">
+                      <span>Enter the GCoin wallet address of the recipient.</span>
+                      {recipientValidation.message && (
+                        <span className={`mt-1 text-sm ${
+                          recipientValidation.isValid ? "text-green-600" : "text-orange-600"
+                        }`}>
+                          {recipientValidation.message}
+                        </span>
+                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -411,9 +493,16 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
                         <Input
                           placeholder="username"
                           autoComplete="off"
-                          className="pl-9"
+                          className={`pl-9 ${recipientValidation.message ? 
+                            (recipientValidation.isValid ? "border-green-500 focus:ring-green-500" : "border-orange-500 focus:ring-orange-500") 
+                            : ""}`}
                           {...field}
                         />
+                        {recipientValidation.isChecking && (
+                          <div className="absolute right-3 top-2.5">
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          </div>
+                        )}
                       </div>
                     </FormControl>
                     <FormDescription>

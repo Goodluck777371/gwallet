@@ -8,6 +8,26 @@ import { checkRecipientExists, checkUsernameExists } from "./transactionService"
 const ADMIN_WALLET = "gCoinAdmin123456";
 
 /**
+ * Validates a wallet address format
+ */
+const isValidWalletFormat = (wallet: string): boolean => {
+  // Format validation: must start with gCoin followed by alphanumeric characters
+  const walletRegex = /^gCoin[a-zA-Z0-9]{8,}$/;
+  return walletRegex.test(wallet);
+};
+
+/**
+ * Creates a standardized wallet address format if needed
+ */
+const standardizeWalletAddress = (wallet: string): string => {
+  // If not starting with gCoin, prefix it
+  if (wallet && !wallet.startsWith('gCoin')) {
+    return `gCoin${wallet}`;
+  }
+  return wallet;
+};
+
+/**
  * Attempts to find the recipient user by either username or wallet address
  */
 const findRecipient = async (
@@ -16,6 +36,11 @@ const findRecipient = async (
 ): Promise<{ recipientWallet: string; recipientUser: { id: string; username?: string } | null }> => {
   let recipientWallet = recipient;
   let recipientUser: { id: string; username?: string } | null = null;
+  
+  // For wallet addresses, ensure they are in the correct format
+  if (!isUsername) {
+    recipientWallet = standardizeWalletAddress(recipientWallet);
+  }
   
   if (isUsername) {
     console.log("Looking up user by username:", recipient);
@@ -31,6 +56,30 @@ const findRecipient = async (
     console.log("Looking up user by wallet address:", recipientWallet);
     recipientUser = await fetchUserByWalletAddress(recipientWallet);
     console.log("Wallet lookup result:", recipientUser);
+    
+    // If not found, try a fuzzy match by querying similar wallets
+    if (!recipientUser) {
+      try {
+        // Get all wallet addresses
+        const { data: wallets } = await supabase
+          .from('profiles')
+          .select('id, wallet_address, username')
+          .ilike('wallet_address', `%${recipientWallet.substring(5)}%`); // Match partial wallet ID
+        
+        if (wallets && wallets.length > 0) {
+          // Use the first close match
+          const closestMatch = wallets[0];
+          recipientWallet = closestMatch.wallet_address;
+          recipientUser = { 
+            id: closestMatch.id, 
+            username: closestMatch.username 
+          };
+          console.log("Found similar wallet:", recipientWallet);
+        }
+      } catch (err) {
+        console.error("Error during fuzzy wallet lookup:", err);
+      }
+    }
   }
   
   return { recipientWallet, recipientUser };
@@ -360,6 +409,24 @@ export const sendMoney = async (
   try {
     console.log(`Starting money transfer: ${amount} from ${senderWallet} to ${recipient} (isUsername: ${isUsername})`);
     
+    // Additional validation for wallet address format
+    if (!isUsername && !isValidWalletFormat(recipient)) {
+      // Try to standardize the format
+      const standardizedWallet = standardizeWalletAddress(recipient);
+      
+      if (!isValidWalletFormat(standardizedWallet)) {
+        return {
+          success: false,
+          transactionId: crypto.randomUUID(),
+          status: "failed",
+          message: "Invalid wallet address format. Please use a valid GCoin wallet address (starts with gCoin followed by alphanumeric characters)."
+        };
+      }
+      
+      // Use the standardized format
+      recipient = standardizedWallet;
+    }
+    
     // Get the actual wallet address if recipient is a username
     const { recipientWallet, recipientUser } = await findRecipient(recipient, isUsername);
     
@@ -370,12 +437,32 @@ export const sendMoney = async (
       // Check if the wallet address exists before proceeding
       const exists = await checkRecipientExists(recipientWallet);
       if (!exists) {
-        return {
-          success: false,
-          transactionId: crypto.randomUUID(),
-          status: "failed",
-          message: "Recipient wallet address does not exist. Please check and try again."
-        };
+        // Look for similar wallets as suggestions
+        try {
+          const { data: wallets } = await supabase
+            .from('profiles')
+            .select('wallet_address')
+            .limit(3);
+            
+          const suggestions = wallets && wallets.length > 0 
+            ? wallets.map(w => w.wallet_address).join(', ')
+            : "none found";
+          
+          return {
+            success: false,
+            transactionId: crypto.randomUUID(),
+            status: "failed",
+            message: `Recipient wallet address not found. Please check and try again. Available wallet addresses: ${suggestions}`
+          };
+        } catch (err) {
+          console.error("Error finding similar wallets:", err);
+          return {
+            success: false,
+            transactionId: crypto.randomUUID(),
+            status: "failed",
+            message: "Recipient wallet address does not exist. Please check and try again."
+          };
+        }
       }
     }
     

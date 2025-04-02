@@ -1,23 +1,24 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight, InboxIcon } from "lucide-react";
+import { ArrowRight, Wallet, BarChart3, DollarSign, Clock, InboxIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
-import { getTransactions } from "@/utils/transactionService";
-import { getExchangeRates, currencyRates } from "@/utils/currencyUtils";
+
+// Mock data
+const MOCK_EXCHANGE_RATE = 850; // 1 GCoin = 850 Naira
+const MOCK_WALLET_ADDRESS = "gc_8e9d3fe2a79c4b5e8f6d3c2b1a5d4e3f2c1b5a4d3e2f1c5b4a3d2e1f";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [balance, setBalance] = useState(185.5);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(currencyRates.NGN);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,74 +28,17 @@ const Dashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch user transactions from Supabase when user data is available
-  useEffect(() => {
-    if (user) {
-      setIsLoadingTransactions(true);
-      console.log("Current user data:", user); // Debug user data
-      
-      const fetchTransactions = async () => {
-        try {
-          const userTransactions = await getTransactions(user.id);
-          setTransactions(userTransactions);
-        } catch (error) {
-          console.error("Failed to load transactions:", error);
-          setTransactions([]);
-        } finally {
-          setIsLoadingTransactions(false);
-        }
-      };
-
-      fetchTransactions();
-    }
-  }, [user]);
-
-  // Fetch exchange rates
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      try {
-        // Get the latest rates - the updated getExchangeRates ensures consistency
-        const rates = await getExchangeRates();
-        if (rates.NGN) {
-          setExchangeRate(rates.NGN);
-          console.log("Updated NGN exchange rate:", rates.NGN);
-        }
-      } catch (error) {
-        console.error("Failed to load exchange rate:", error);
-        // Fall back to our consistent default rate
-        setExchangeRate(currencyRates.NGN);
-      }
-    };
-
-    fetchExchangeRate();
-  }, []);
-
-  // Format the Naira value using the current exchange rate
-  const nairaValue = user ? user.balance * exchangeRate : 0;
+  const nairaValue = balance * MOCK_EXCHANGE_RATE;
   const formattedNairaValue = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN'
   }).format(nairaValue);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
-          <p className="text-gray-500">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  console.log("Current user balance:", user.balance); // Debug balance
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <Sidebar />
       
-      <main className="pt-20 pb-16 px-4 md:ml-64">
+      <main className="pt-20 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h1 className={`text-3xl font-bold transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
@@ -108,9 +52,9 @@ const Dashboard = () => {
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div className={`md:col-span-2 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <WalletCard 
-                balance={user?.balance || 0} 
-                walletAddress={user?.walletAddress || ''}
-                owner={user?.username}
+                balance={balance} 
+                walletAddress={MOCK_WALLET_ADDRESS}
+                owner={user?.username || "You"}
               />
             </div>
             
@@ -133,7 +77,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Exchange Rate</p>
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-semibold">₦{exchangeRate.toLocaleString('en-NG')}</span>
+                      <span className="text-2xl font-semibold">₦{MOCK_EXCHANGE_RATE}</span>
                       <span className="ml-2 text-xs text-muted-foreground">per GCoin</span>
                     </div>
                   </div>
@@ -164,12 +108,7 @@ const Dashboard = () => {
                 <TabsContent value="recent" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {isLoadingTransactions ? (
-                        <div className="py-20 text-center">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
-                          <p className="text-gray-500">Loading your transactions...</p>
-                        </div>
-                      ) : transactions.length > 0 ? (
+                      {transactions.length > 0 ? (
                         transactions.slice(0, 3).map((transaction, index) => (
                           <TransactionItem 
                             key={transaction.id}
@@ -211,12 +150,7 @@ const Dashboard = () => {
                 <TabsContent value="all" className="mt-0">
                   <Card>
                     <CardContent className="p-0">
-                      {isLoadingTransactions ? (
-                        <div className="py-20 text-center">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
-                          <p className="text-gray-500">Loading your transactions...</p>
-                        </div>
-                      ) : transactions.length > 0 ? (
+                      {transactions.length > 0 ? (
                         transactions.map((transaction, index) => (
                           <TransactionItem 
                             key={transaction.id}
@@ -244,6 +178,49 @@ const Dashboard = () => {
                   </Card>
                 </TabsContent>
               </Tabs>
+            </div>
+          </div>
+          
+          <div className={`grid md:grid-cols-3 gap-6 transition-all duration-500 delay-500 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <div className="md:col-span-3">
+              <h2 className="text-xl font-semibold mb-4">Quick Access</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Link to="/send">
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
+                      <Wallet className="h-6 w-6 text-gcoin-blue" />
+                    </div>
+                    <h3 className="font-medium">Send GCoins</h3>
+                  </div>
+                </Link>
+                
+                <Link to="/transactions">
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
+                      <Clock className="h-6 w-6 text-gcoin-blue" />
+                    </div>
+                    <h3 className="font-medium">Transaction History</h3>
+                  </div>
+                </Link>
+                
+                <Link to="/exchange">
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
+                      <DollarSign className="h-6 w-6 text-gcoin-blue" />
+                    </div>
+                    <h3 className="font-medium">Exchange Rates</h3>
+                  </div>
+                </Link>
+                
+                <Link to="/settings">
+                  <div className="bg-white p-4 rounded-xl border border-gray-100 hover:shadow-md transition-shadow text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gcoin-blue/10 mb-3">
+                      <BarChart3 className="h-6 w-6 text-gcoin-blue" />
+                    </div>
+                    <h3 className="font-medium">Account Settings</h3>
+                  </div>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

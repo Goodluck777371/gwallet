@@ -4,8 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2, Bell, Shield, User, Key, Globe, DollarSign } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2, Bell, Shield, User, Key } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,15 +24,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Header from "@/components/Header";
-import { currencyRates } from "@/utils/transactionUtils";
 
 const profileFormSchema = z.object({
   username: z.string().min(3, {
@@ -63,43 +55,12 @@ const notificationsFormSchema = z.object({
   promotionalEmails: z.boolean(),
 });
 
-const preferencesFormSchema = z.object({
-  defaultCountry: z.string(),
-  defaultCurrency: z.string(),
-});
-
-// List of countries
-const countries = [
-  { value: "us", label: "United States" },
-  { value: "uk", label: "United Kingdom" },
-  { value: "ca", label: "Canada" },
-  { value: "au", label: "Australia" },
-  { value: "de", label: "Germany" },
-  { value: "fr", label: "France" },
-  { value: "es", label: "Spain" },
-  { value: "it", label: "Italy" },
-  { value: "jp", label: "Japan" },
-  { value: "cn", label: "China" },
-  { value: "in", label: "India" },
-  { value: "br", label: "Brazil" },
-  { value: "za", label: "South Africa" },
-  { value: "ng", label: "Nigeria" },
-  { value: "gh", label: "Ghana" },
-  { value: "ke", label: "Kenya" },
-  { value: "ug", label: "Uganda" },
-  { value: "tz", label: "Tanzania" },
-  { value: "rw", label: "Rwanda" },
-  { value: "et", label: "Ethiopia" },
-  { value: "mx", label: "Mexico" },
-];
-
 const Settings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
   const [isNotificationsSubmitting, setIsNotificationsSubmitting] = useState(false);
-  const [isPreferencesSubmitting, setIsPreferencesSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -134,14 +95,6 @@ const Settings = () => {
       marketUpdates: false,
       securityAlerts: true,
       promotionalEmails: false,
-    },
-  });
-
-  const preferencesForm = useForm<z.infer<typeof preferencesFormSchema>>({
-    resolver: zodResolver(preferencesFormSchema),
-    defaultValues: {
-      defaultCountry: "us",
-      defaultCurrency: "USD",
     },
   });
 
@@ -214,27 +167,6 @@ const Settings = () => {
     }
   };
 
-  const onPreferencesSubmit = async (values: z.infer<typeof preferencesFormSchema>) => {
-    setIsPreferencesSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Preferences updated",
-        description: "Your country and currency preferences have been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Failed to update preferences",
-        description: "There was a problem updating your preferences. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPreferencesSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -252,7 +184,7 @@ const Settings = () => {
           
           <div className={`transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid grid-cols-4 w-full max-w-md mb-8">
+              <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
                 <TabsTrigger value="profile" className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
                   Profile
@@ -260,10 +192,6 @@ const Settings = () => {
                 <TabsTrigger value="security" className="flex items-center">
                   <Shield className="h-4 w-4 mr-2" />
                   Security
-                </TabsTrigger>
-                <TabsTrigger value="preferences" className="flex items-center">
-                  <Globe className="h-4 w-4 mr-2" />
-                  Preferences
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="flex items-center">
                   <Bell className="h-4 w-4 mr-2" />
@@ -423,92 +351,6 @@ const Settings = () => {
                       </Button>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="preferences">
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h2 className="text-xl font-semibold mb-6">Regional Preferences</h2>
-                  
-                  <Form {...preferencesForm}>
-                    <form onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)} className="space-y-6">
-                      <FormField
-                        control={preferencesForm.control}
-                        name="defaultCountry"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Default Country</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a country" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {countries.map((country) => (
-                                  <SelectItem key={country.value} value={country.value}>
-                                    {country.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              This will be used for region-specific features.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={preferencesForm.control}
-                        name="defaultCurrency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Default Currency</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select a currency" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.keys(currencyRates).map((currency) => (
-                                  <SelectItem key={currency} value={currency}>
-                                    {currency}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Your preferred currency for displaying values.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button 
-                        type="submit" 
-                        disabled={isPreferencesSubmitting}
-                      >
-                        {isPreferencesSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Preferences"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
                 </div>
               </TabsContent>
               

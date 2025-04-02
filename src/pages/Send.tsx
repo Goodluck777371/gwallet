@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, HelpCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import SendMoneyForm from "@/components/SendMoneyForm";
 
 const Send = () => {
-  const { user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -25,7 +25,7 @@ const Send = () => {
     toast({
       title: "Transfer Successful! 🎉",
       description: "Your GCoins have been sent successfully.",
-      variant: "debit", // Using our variant for debit transactions
+      variant: "debit", // Using our new variant for debit transactions
     });
   };
 
@@ -41,22 +41,12 @@ const Send = () => {
               Back to Dashboard
             </Link>
             
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-                  Send GCoins
-                </h1>
-                <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-                  Transfer GCoins to another wallet or username
-                </p>
-              </div>
-              <Link 
-                to="/customer-care" 
-                className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium">
-                <HelpCircle className="h-4 w-4 mr-1" />
-                Need Help?
-              </Link>
-            </div>
+            <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+              Send GCoins
+            </h1>
+            <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+              Transfer GCoins to another wallet
+            </p>
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>

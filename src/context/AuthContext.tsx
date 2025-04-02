@@ -1,98 +1,167 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { useAuthState } from '@/hooks/useAuthState';
-import { loginUser, registerUser, logoutUser } from '@/services/authService';
-import { updateUserBalance } from '@/services/profileService';
+import { useToast } from "@/components/ui/use-toast";
 
-// Custom User type
+// User type
 export interface User {
   id: string;
   username: string;
   email: string;
-  walletAddress: string;
-  balance: number;
 }
 
 // Auth context type
 interface AuthContextType {
   user: User | null;
-  supabaseUser: SupabaseUser | null;
-  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateBalance: (newBalance: number) => void;
 }
+
+// Mock data for demonstration
+const MOCK_USERS = [
+  {
+    id: '1',
+    username: 'demo',
+    email: 'demo@example.com',
+    password: 'password123'
+  }
+];
 
 // Create the auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, setUser, supabaseUser, session, isLoading } = useAuthState();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const storedUser = localStorage.getItem('gcoin-user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('gcoin-user');
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
   // Login function
   const login = async (email: string, password: string) => {
-    const result = await loginUser(email, password);
-    if (result.success) {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Find user (in real app, would be a backend call)
+      const foundUser = MOCK_USERS.find(u => u.email === email && u.password === password);
+      
+      if (!foundUser) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Create user object without password
+      const { password: _, ...userWithoutPassword } = foundUser;
+      
+      // Set user in state and localStorage
+      setUser(userWithoutPassword);
+      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${foundUser.username}!`,
+      });
+
       navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Register function
   const register = async (username: string, email: string, password: string) => {
-    const result = await registerUser(username, email, password);
-    if (result.success) {
-      // Wait a moment to ensure the trigger has time to create the profile
-      setTimeout(() => {
-        if (result.data?.user) {
-          navigate('/dashboard');
-        }
-      }, 1000);
-    }
-  };
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-  // Update balance function
-  const updateBalance = async (newBalance: number) => {
-    if (user && session) {
-      const success = await updateUserBalance(user.id, newBalance);
-      if (success) {
-        setUser({
-          ...user,
-          balance: newBalance
-        });
+      // Check if email is already used (in real app, would be a backend call)
+      if (MOCK_USERS.some(u => u.email === email)) {
+        throw new Error('Email already in use');
       }
+
+      // Create new user
+      const newUser = {
+        id: String(Date.now()),
+        username,
+        email,
+        password
+      };
+
+      // In a real app, you would send this to your backend
+      // For demo, we'll just add to our mock data
+      MOCK_USERS.push(newUser);
+
+      // Create user object without password
+      const { password: _, ...userWithoutPassword } = newUser;
+      
+      // Set user in state and localStorage
+      setUser(userWithoutPassword);
+      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
+      
+      toast({
+        title: "Registration successful",
+        description: `Welcome, ${username}!`,
+      });
+
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Logout function
-  const logout = async () => {
-    // Confirm before logout
-    if (window.confirm("Are you sure you want to log out?")) {
-      const success = await logoutUser();
-      if (success) {
-        navigate('/');
-      }
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('gcoin-user');
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+    navigate('/');
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        supabaseUser,
-        session,
         isAuthenticated: !!user,
         isLoading,
         login,
         register,
-        logout,
-        updateBalance
+        logout
       }}
     >
       {children}

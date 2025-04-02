@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search, AlertTriangle } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,17 +13,95 @@ import {
 } from "@/components/ui/select";
 import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
-import { getTransactions } from "@/utils/transactionService";
+
+// Mock data
+const MOCK_TRANSACTIONS: Transaction[] = [
+  {
+    id: "1",
+    type: "receive",
+    amount: 50,
+    recipient: "You",
+    sender: "John Doe",
+    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+    status: "completed",
+    description: "Payment for design work"
+  },
+  {
+    id: "2",
+    type: "send",
+    amount: 25.5,
+    recipient: "Sarah Wilson",
+    sender: "You",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+    status: "completed"
+  },
+  {
+    id: "3",
+    type: "receive",
+    amount: 10,
+    recipient: "You",
+    sender: "Michael Brown",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+    status: "completed",
+    description: "Split lunch bill"
+  },
+  {
+    id: "4",
+    type: "send",
+    amount: 100,
+    recipient: "Lisa Johnson",
+    sender: "You",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
+    status: "completed"
+  },
+  {
+    id: "5",
+    type: "send",
+    amount: 5,
+    recipient: "Coffee Shop",
+    sender: "You",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
+    status: "pending"
+  },
+  {
+    id: "6",
+    type: "receive",
+    amount: 75,
+    recipient: "You",
+    sender: "David Wilson",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
+    status: "completed",
+    description: "Consulting fee"
+  },
+  {
+    id: "7",
+    type: "send",
+    amount: 15.75,
+    recipient: "Restaurant",
+    sender: "You",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
+    status: "failed"
+  },
+  {
+    id: "8",
+    type: "receive",
+    amount: 200,
+    recipient: "You",
+    sender: "Emma Thompson",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
+    status: "completed",
+    description: "Project payment"
+  }
+];
 
 const Transactions = () => {
-  const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  const { isAuthenticated } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,29 +111,6 @@ const Transactions = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch user transactions from Supabase
-  useEffect(() => {
-    if (user) {
-      setIsLoading(true);
-      
-      const fetchTransactions = async () => {
-        try {
-          const userTransactions = await getTransactions(user.id);
-          console.log("Fetched transactions:", userTransactions);
-          setTransactions(userTransactions);
-        } catch (error) {
-          console.error("Failed to load transactions:", error);
-          setTransactions([]);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fetchTransactions();
-    }
-  }, [user]);
-
-  // Apply filters
   useEffect(() => {
     let result = transactions;
     
@@ -63,8 +119,8 @@ const Transactions = () => {
       const searchLower = search.toLowerCase();
       result = result.filter(
         (tx) => 
-          tx.sender?.toLowerCase().includes(searchLower) ||
-          tx.recipient?.toLowerCase().includes(searchLower) ||
+          tx.sender.toLowerCase().includes(searchLower) ||
+          tx.recipient.toLowerCase().includes(searchLower) ||
           tx.description?.toLowerCase().includes(searchLower)
       );
     }
@@ -81,17 +137,6 @@ const Transactions = () => {
     
     setFilteredTransactions(result);
   }, [search, typeFilter, statusFilter, transactions]);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
-          <p className="text-gray-500">Loading your transactions...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,7 +203,6 @@ const Transactions = () => {
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -166,12 +210,7 @@ const Transactions = () => {
             </div>
             
             <div className="divide-y divide-gray-100">
-              {isLoading ? (
-                <div className="py-20 text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gcoin-blue mb-4"></div>
-                  <p className="text-gray-500">Loading your transactions...</p>
-                </div>
-              ) : filteredTransactions.length > 0 ? (
+              {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
                   <TransactionItem 
                     key={transaction.id}
@@ -179,17 +218,8 @@ const Transactions = () => {
                   />
                 ))
               ) : (
-                <div className="py-20 text-center">
-                  <div className="bg-gray-100 rounded-full p-4 inline-block mb-4">
-                    <AlertTriangle className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No transactions yet</h3>
-                  <p className="text-gray-500 max-w-md mx-auto mb-8">
-                    You haven't made any transactions yet. When you send or receive GCoins, they will appear here.
-                  </p>
-                  <Button asChild>
-                    <a href="/send">Send your first GCoins</a>
-                  </Button>
+                <div className="py-8 text-center">
+                  <p className="text-gray-500">No transactions found</p>
                 </div>
               )}
             </div>

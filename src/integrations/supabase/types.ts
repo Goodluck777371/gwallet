@@ -82,6 +82,7 @@ export type Database = {
           fee: number | null
           id: string
           recipient: string | null
+          related_transaction_id: string | null
           sender: string | null
           status: string
           timestamp: string
@@ -94,6 +95,7 @@ export type Database = {
           fee?: number | null
           id?: string
           recipient?: string | null
+          related_transaction_id?: string | null
           sender?: string | null
           status: string
           timestamp?: string
@@ -106,6 +108,7 @@ export type Database = {
           fee?: number | null
           id?: string
           recipient?: string | null
+          related_transaction_id?: string | null
           sender?: string | null
           status?: string
           timestamp?: string

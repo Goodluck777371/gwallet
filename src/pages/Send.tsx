@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -41,12 +41,22 @@ const Send = () => {
               Back to Dashboard
             </Link>
             
-            <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Send GCoins
-            </h1>
-            <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Transfer GCoins to another wallet or username
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                  Send GCoins
+                </h1>
+                <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                  Transfer GCoins to another wallet or username
+                </p>
+              </div>
+              <Link 
+                to="/customer-care" 
+                className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium">
+                <HelpCircle className="h-4 w-4 mr-1" />
+                Need Help?
+              </Link>
+            </div>
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>

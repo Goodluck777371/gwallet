@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (usernameOrEmail: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -55,17 +55,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Login function
-  const login = async (email: string, password: string) => {
+  const login = async (usernameOrEmail: string, password: string) => {
     setIsLoading(true);
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 800));
       
       // Find user (in real app, would be a backend call)
-      const foundUser = MOCK_USERS.find(u => u.email === email && u.password === password);
+      // Check if input is email or username
+      const foundUser = MOCK_USERS.find(u => 
+        (u.email === usernameOrEmail || u.username === usernameOrEmail) && 
+        u.password === password
+      );
       
       if (!foundUser) {
-        throw new Error('Invalid credentials');
+        throw new Error('Invalid username/email or password');
       }
 
       // Create user object without password

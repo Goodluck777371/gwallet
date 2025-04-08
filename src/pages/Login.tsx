@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address",
+  usernameOrEmail: z.string().min(1, {
+    message: "Please enter your username or email",
   }),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters",
@@ -34,7 +34,7 @@ const Login = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      usernameOrEmail: "",
       password: "",
     },
   });
@@ -42,7 +42,7 @@ const Login = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
-      await login(values.email, values.password);
+      await login(values.usernameOrEmail, values.password);
     } catch (error) {
       console.error("Login error:", error);
     } finally {
@@ -73,15 +73,14 @@ const Login = () => {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="usernameOrEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Username or Email</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Enter your email" 
-                          type="email" 
-                          autoComplete="email"
+                          placeholder="Enter your username or email" 
+                          autoComplete="username"
                           {...field} 
                         />
                       </FormControl>

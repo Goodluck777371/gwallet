@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -15,24 +16,29 @@ import {
 } from "@/components/ui/dialog";
 
 interface WalletCardProps {
-  balance: number;
-  walletAddress: string;
-  owner?: string;
   className?: string;
 }
 
-const WalletCard = ({ balance, walletAddress, owner = "You", className }: WalletCardProps) => {
+const WalletCard = ({ className }: WalletCardProps) => {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+  
+  const walletAddress = user?.wallet_address || '';
+  const balance = user?.balance || 0;
 
   const formattedBalance = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(balance);
 
-  const shortenedAddress = `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}`;
+  const shortenedAddress = walletAddress ? 
+    `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}` : 
+    '';
 
   const copyToClipboard = async () => {
+    if (!walletAddress) return;
+    
     try {
       await navigator.clipboard.writeText(walletAddress);
       setCopied(true);
@@ -103,7 +109,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1">
               <h3 className="text-sm font-medium text-gray-500">Wallet Address</h3>
-              <span className="text-xs text-gray-400">({owner})</span>
+              <span className="text-xs text-gray-400">({user?.username || 'You'})</span>
             </div>
             <Button
               variant="ghost"
@@ -111,6 +117,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
               className="h-6 w-6"
               onClick={copyToClipboard}
               aria-label="Copy wallet address"
+              disabled={!walletAddress}
             >
               {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
@@ -119,7 +126,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
             className="text-sm font-mono bg-gray-50 dark:bg-gray-800 py-2 px-3 rounded-md flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             onClick={copyToClipboard}
           >
-            <span>{shortenedAddress}</span>
+            <span>{shortenedAddress || 'Connect to view address'}</span>
             <span className="text-xs text-gray-400">Click to copy</span>
           </div>
         </div>
@@ -176,7 +183,7 @@ const WalletCard = ({ balance, walletAddress, owner = "You", className }: Wallet
                     onClick={copyToClipboard}
                     className="cursor-pointer text-sm font-mono bg-gray-50 hover:bg-gray-100 py-3 px-4 rounded-md flex items-center justify-center break-all"
                   >
-                    {walletAddress}
+                    {walletAddress || 'Connect to view address'}
                     {copied ? (
                       <CheckCircle2 className="h-4 w-4 ml-2 text-green-500 flex-shrink-0" />
                     ) : (

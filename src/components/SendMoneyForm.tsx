@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   recipient: z.string().min(8, {
@@ -47,6 +48,7 @@ interface SendMoneyFormProps {
 
 const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const { toast } = useToast();
+  const { user, refreshProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [transactionId, setTransactionId] = useState("");
@@ -86,11 +88,20 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
-    // Check if user has enough balance (mock implementation)
-    const mockUserBalance = 200; // This would come from your actual user state
+    // Check if user has enough balance
+    if (!user?.balance) {
+      toast({
+        title: "Profile error",
+        description: "Cannot retrieve your balance. Please try again later.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
     const totalCost = values.amount + fee;
     
-    if (totalCost > mockUserBalance) {
+    if (totalCost > user.balance) {
       toast({
         title: "Insufficient balance",
         description: `Your balance is too low for this transaction. You need ${totalCost.toFixed(2)} GCoins (including ${fee.toFixed(2)} GCoins fee).`,
@@ -112,12 +123,20 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the send_money function via RPC
+      const { data, error } = await supabase.rpc('send_money', {
+        amount: values.amount,
+        recipient_wallet: values.recipient,
+        note: values.note || null
+      });
       
-      // Generate mock transaction ID
-      const mockTransactionId = `TX${Date.now().toString().substring(5)}`;
-      setTransactionId(mockTransactionId);
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Get transaction ID from response
+      const txId = data;
+      setTransactionId(txId);
       
       // Store transaction details for receipt
       setTransactionDetails({
@@ -132,16 +151,19 @@ const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
       // Show success dialog
       setShowSuccessDialog(true);
       
+      // Refresh user profile to get updated balance
+      await refreshProfile();
+      
       // Call onSuccess callback
       onSuccess();
       
       // Reset form
       form.reset();
       
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Transaction failed",
-        description: "There was an error processing your transaction. Please try again.",
+        description: error.message || "There was an error processing your transaction. Please try again.",
         variant: "destructive",
       });
     } finally {

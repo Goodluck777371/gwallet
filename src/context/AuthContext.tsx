@@ -1,94 +1,153 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
-// User type
-export interface User {
+// User type (extended from Supabase User)
+export interface AppUser {
   id: string;
   username: string;
   email: string;
+  wallet_address?: string;
+  balance?: number;
 }
 
 // Auth context type
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (usernameOrEmail: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
-
-// Mock data for demonstration
-const MOCK_USERS = [
-  {
-    id: '1',
-    username: 'demo',
-    email: 'demo@example.com',
-    password: 'password123'
-  }
-];
 
 // Create the auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const storedUser = localStorage.getItem('gcoin-user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('gcoin-user');
+  // Fetch user profile data
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
       }
+
+      if (data) {
+        return {
+          id: data.id,
+          username: data.username,
+          email: data.email,
+          wallet_address: data.wallet_address,
+          balance: data.balance
+        };
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
     }
-    setIsLoading(false);
+    
+    return null;
+  };
+
+  // Get full user with profile data
+  const getUserWithProfile = async (supabaseUser: User): Promise<AppUser | null> => {
+    if (!supabaseUser?.id) return null;
+    
+    const profileData = await fetchUserProfile(supabaseUser.id);
+    
+    if (profileData) {
+      return profileData;
+    }
+    
+    return {
+      id: supabaseUser.id,
+      username: supabaseUser.email?.split('@')[0] || 'User',
+      email: supabaseUser.email || '',
+    };
+  };
+
+  // Set up auth state listener and refresh profile data
+  useEffect(() => {
+    setIsLoading(true);
+    
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          // Defer profile fetch to avoid Supabase deadlock
+          setTimeout(async () => {
+            const userData = await getUserWithProfile(currentSession.user);
+            setUser(userData);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        const userData = await getUserWithProfile(currentSession.user);
+        setUser(userData);
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Login function
-  const login = async (usernameOrEmail: string, password: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Find user (in real app, would be a backend call)
-      // Check if input is email or username
-      const foundUser = MOCK_USERS.find(u => 
-        (u.email === usernameOrEmail || u.username === usernameOrEmail) && 
-        u.password === password
-      );
-      
-      if (!foundUser) {
-        throw new Error('Invalid username/email or password');
+      if (error) {
+        throw error;
       }
 
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = foundUser;
-      
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
-      
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${foundUser.username}!`,
-      });
+      if (data.user) {
+        const userData = await getUserWithProfile(data.user);
+        setUser(userData);
+        
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${userData?.username}!`,
+        });
 
-      navigate('/dashboard');
-    } catch (error) {
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
       throw error;
@@ -101,43 +160,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (username: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Check if email is already used (in real app, would be a backend call)
-      if (MOCK_USERS.some(u => u.email === email)) {
-        throw new Error('Email already in use');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+          }
+        }
+      });
+      
+      if (error) {
+        throw error;
       }
 
-      // Create new user
-      const newUser = {
-        id: String(Date.now()),
-        username,
-        email,
-        password
-      };
+      if (data.user) {
+        // If auto-confirm is enabled, we can get the profile immediately
+        // Otherwise wait for user to confirm email
+        const userData = await getUserWithProfile(data.user);
+        setUser(userData);
+        
+        toast({
+          title: "Registration successful",
+          description: data.session ? 
+            `Welcome, ${username}!` : 
+            "Please check your email to confirm your account",
+        });
 
-      // In a real app, you would send this to your backend
-      // For demo, we'll just add to our mock data
-      MOCK_USERS.push(newUser);
-
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = newUser;
-      
-      // Set user in state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem('gcoin-user', JSON.stringify(userWithoutPassword));
-      
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${username}!`,
-      });
-
-      navigate('/dashboard');
-    } catch (error) {
+        if (data.session) {
+          navigate('/dashboard');
+        }
+      }
+    } catch (error: any) {
       toast({
         title: "Registration failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
       throw error;
@@ -147,14 +204,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Logout function
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('gcoin-user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    navigate('/');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Error during logout",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Function to refresh user profile data
+  const refreshProfile = async () => {
+    if (!session?.user) return;
+    
+    try {
+      const updatedUserData = await getUserWithProfile(session.user);
+      setUser(updatedUserData);
+    } catch (error) {
+      console.error("Failed to refresh profile:", error);
+    }
   };
 
   return (
@@ -165,7 +242,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
-        logout
+        logout,
+        refreshProfile
       }}
     >
       {children}

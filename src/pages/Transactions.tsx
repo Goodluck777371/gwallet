@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,94 +15,15 @@ import {
 import Header from "@/components/Header";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
 
-// Mock data
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    type: "receive",
-    amount: 50,
-    recipient: "You",
-    sender: "John Doe",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    status: "completed",
-    description: "Payment for design work"
-  },
-  {
-    id: "2",
-    type: "send",
-    amount: 25.5,
-    recipient: "Sarah Wilson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-    status: "completed"
-  },
-  {
-    id: "3",
-    type: "receive",
-    amount: 10,
-    recipient: "You",
-    sender: "Michael Brown",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    status: "completed",
-    description: "Split lunch bill"
-  },
-  {
-    id: "4",
-    type: "send",
-    amount: 100,
-    recipient: "Lisa Johnson",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    status: "completed"
-  },
-  {
-    id: "5",
-    type: "send",
-    amount: 5,
-    recipient: "Coffee Shop",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    status: "pending"
-  },
-  {
-    id: "6",
-    type: "receive",
-    amount: 75,
-    recipient: "You",
-    sender: "David Wilson",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
-    status: "completed",
-    description: "Consulting fee"
-  },
-  {
-    id: "7",
-    type: "send",
-    amount: 15.75,
-    recipient: "Restaurant",
-    sender: "You",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-    status: "failed"
-  },
-  {
-    id: "8",
-    type: "receive",
-    amount: 200,
-    recipient: "You",
-    sender: "Emma Thompson",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
-    status: "completed",
-    description: "Project payment"
-  }
-];
-
 const Transactions = () => {
-  const { isAuthenticated } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,6 +32,67 @@ const Transactions = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Fetch transactions when user is available
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchTransactions = async () => {
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Map to the Transaction type
+        const formattedTransactions: Transaction[] = (data || []).map(tx => ({
+          id: tx.id,
+          type: tx.type as 'send' | 'receive',
+          amount: tx.amount,
+          recipient: tx.recipient || '',
+          sender: tx.sender || '',
+          timestamp: new Date(tx.timestamp),
+          status: tx.status,
+          description: tx.description || undefined,
+          fee: tx.fee
+        }));
+        
+        setTransactions(formattedTransactions);
+        setFilteredTransactions(formattedTransactions);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+    
+    // Set up realtime subscription for new transactions
+    const subscription = supabase
+      .channel('schema_db_changes')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        }, 
+        (payload) => {
+          // Refresh transactions when there is a change
+          fetchTransactions();
+        })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     let result = transactions;
@@ -210,7 +193,11 @@ const Transactions = () => {
             </div>
             
             <div className="divide-y divide-gray-100">
-              {filteredTransactions.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin h-8 w-8 border-4 border-gcoin-blue/20 border-t-gcoin-blue rounded-full"></div>
+                </div>
+              ) : filteredTransactions.length > 0 ? (
                 filteredTransactions.map((transaction) => (
                   <TransactionItem 
                     key={transaction.id}

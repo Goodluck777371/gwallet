@@ -98,26 +98,42 @@ const Settings = () => {
     },
   });
 
-  const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
-    setIsProfileSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Failed to update profile",
-        description: "There was a problem updating your profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProfileSubmitting(false);
+const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+  setIsProfileSubmitting(true);
+  try {
+    // Replace this with actual Supabase update query
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        username: values.username,
+        email: values.email,
+        // Include other fields you want to update
+      })
+      .eq('id', user.id); // Ensure you match the correct user by ID
+
+    if (error) {
+      throw error;
     }
-  };
+
+    // Show success message only if the update is successful
+    toast({
+      title: "Profile updated",
+      description: "Your profile information has been updated successfully.",
+    });
+
+    // Optionally refresh the user profile
+    await refreshProfile();
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    toast({
+      title: "Failed to update profile",
+      description: "There was a problem updating your profile. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsProfileSubmitting(false);
+  }
+};
 
   const onPasswordSubmit = async (values: z.infer<typeof passwordFormSchema>) => {
     setIsPasswordSubmitting(true);

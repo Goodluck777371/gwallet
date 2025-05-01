@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import SendMoneyForm from "@/components/SendMoneyForm";
+import { SendMoneyForm } from "@/components/SendMoneyForm";
 
 // Parse query params
 function useQuery() {

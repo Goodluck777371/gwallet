@@ -64,14 +64,15 @@ const AppRoutes = () => (
   </Routes>
 );
 
+// Fixed: Changed the order - BrowserRouter should be the outermost router-related wrapper
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <Toaster />
+          <Sonner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

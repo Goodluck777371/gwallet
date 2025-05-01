@@ -1,10 +1,9 @@
-
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Loader2, SendHorizontal, Scan, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Loader2, Send, CheckCircle2, InfoIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -13,168 +12,158 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import QrCodeScanner from '@/components/QrCodeScanner';
-
-// Add the initialRecipient prop to the component props
-export interface SendMoneyFormProps {
-  onSuccess: () => void;
-  initialRecipient?: string;
-}
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { calculateTransactionFee, getFeeDescription, checkDailyLimit } from "@/utils/feeCalculator";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
-  recipient: z
-    .string()
-    .min(1, { message: 'Recipient wallet address is required' })
-    .refine((val) => val.startsWith('gCoin'), {
-      message: 'Must be a valid GCoin wallet address (starts with "gCoin")',
-    }),
+  recipient: z.string().min(8, {
+    message: "Recipient address must be at least 8 characters.",
+  }),
   amount: z
-    .string()
-    .min(1, { message: 'Amount is required' })
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-      message: 'Amount must be a positive number',
+    .number()
+    .min(0.01, {
+      message: "Amount must be at least 0.01 GCoins.",
+    })
+    .max(1000000, {
+      message: "Amount cannot exceed 1,000,000 GCoins (daily limit).",
     }),
   note: z.string().optional(),
-  pin: z.string().length(6, { message: 'PIN must be exactly 6 digits' }).optional(),
 });
 
-export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFormProps) => {
-  const { user, refreshProfile } = useAuth();
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showQrScanner, setShowQrScanner] = useState(false);
-  const [showPinDialog, setShowPinDialog] = useState(false);
-  const [pendingTransaction, setPendingTransaction] = useState<any>(null);
-  const [hasPin, setHasPin] = useState<boolean | null>(null);
-  const [isCheckingPin, setIsCheckingPin] = useState(true);
-  const [isAnimated, setIsAnimated] = useState(false);
+interface SendMoneyFormProps {
+  onSuccess: () => void;
+}
 
-  // Define the form
+const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
+  const { toast } = useToast();
+  const { user, refreshProfile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [transactionId, setTransactionId] = useState("");
+  const [transactionDetails, setTransactionDetails] = useState<{
+    amount: number;
+    recipient: string;
+    fee: number;
+    total: number;
+    date: Date;
+    note?: string;
+  } | null>(null);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      recipient: initialRecipient,
-      amount: '',
-      note: '',
-      pin: '',
+      recipient: "",
+      amount: undefined,
+      note: "",
     },
   });
 
-  const pinForm = useForm<{ pin: string }>({
-    resolver: zodResolver(z.object({
-      pin: z.string().length(6, { message: 'PIN must be exactly 6 digits' }),
-    })),
-    defaultValues: {
-      pin: '',
-    },
-  });
+  const watchAmount = form.watch("amount");
+  const [fee, setFee] = useState(0);
+  const [feeDescription, setFeeDescription] = useState("");
 
   useEffect(() => {
-    // Check if user has a PIN
-    const checkUserPin = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('transaction_pins')
-          .select('user_id')
-          .single();
-
-        setHasPin(!!data);
-      } catch (error) {
-        console.error('Error checking PIN:', error);
-      } finally {
-        setIsCheckingPin(false);
-      }
-    };
-
-    checkUserPin();
-
-    // Animation effect
-    setTimeout(() => {
-      setIsAnimated(true);
-    }, 100);
-
-    // Update form values when initialRecipient changes
-    if (initialRecipient) {
-      form.setValue('recipient', initialRecipient);
+    if (watchAmount && !isNaN(watchAmount)) {
+      const calculatedFee = calculateTransactionFee(watchAmount);
+      setFee(calculatedFee);
+      setFeeDescription(getFeeDescription(watchAmount));
+    } else {
+      setFee(0);
+      setFeeDescription("");
     }
-  }, [form, initialRecipient]);
+  }, [watchAmount]);
 
-  // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!hasPin) {
+    setIsSubmitting(true);
+    
+    // Check if user has enough balance
+    if (!user?.balance) {
       toast({
-        title: "Transaction PIN Required",
-        description: "Please set up a transaction PIN in your account settings before making transfers.",
+        title: "Profile error",
+        description: "Cannot retrieve your balance. Please try again later.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    const totalCost = values.amount + fee;
+    
+    if (totalCost > user.balance) {
+      toast({
+        title: "Insufficient balance",
+        description: `Your balance is too low for this transaction. You need ${totalCost.toFixed(2)} GCoins (including ${fee.toFixed(2)} GCoins fee).`,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    // Check daily limit
+    if (!checkDailyLimit(values.amount)) {
+      toast({
+        title: "Daily limit exceeded",
+        description: "This transaction would exceed your daily limit of 1 million GCoins.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
       return;
     }
 
-    // Store the transaction details and show PIN dialog
-    setPendingTransaction({
-      recipient: values.recipient,
-      amount: parseFloat(values.amount),
-      note: values.note || null
-    });
-    setShowPinDialog(true);
-  };
-
-  // Handle PIN verification and complete transaction
-  const completeSendMoney = async (pin: string) => {
-    if (!pendingTransaction) return;
-    
-    setIsSubmitting(true);
     try {
+      // Call the send_money function via RPC
       const { data, error } = await supabase.rpc('send_money', {
-        recipient_wallet: pendingTransaction.recipient,
-        amount: pendingTransaction.amount,
-        pin: pin, // Send the PIN for verification
-        note: pendingTransaction.note
+        amount: values.amount,
+        recipient_wallet: values.recipient,
+        note: values.note || null
       });
       
       if (error) {
-        throw error;
+        throw new Error(error.message);
       }
       
-      // Success!
-      toast({
-        title: "Transfer Successful",
-        description: `Successfully sent ${pendingTransaction.amount} GCoins to ${pendingTransaction.recipient.substring(0, 8)}...`,
+      // Get transaction ID from response
+      const txId = data;
+      setTransactionId(txId);
+      
+      // Store transaction details for receipt
+      setTransactionDetails({
+        amount: values.amount,
+        recipient: values.recipient,
+        fee: fee,
+        total: values.amount + fee,
+        date: new Date(),
+        note: values.note
       });
       
-      // Reset the form
-      form.reset();
-      pinForm.reset();
-      setShowPinDialog(false);
-      setPendingTransaction(null);
+      // Show success dialog
+      setShowSuccessDialog(true);
       
-      // Refresh user data (to see updated balance)
+      // Refresh user profile to get updated balance
       await refreshProfile();
       
-      // Call the success callback
+      // Call onSuccess callback
       onSuccess();
+      
+      // Reset form
+      form.reset();
+      
     } catch (error: any) {
-      console.error('Error sending money:', error);
       toast({
-        title: "Transfer Failed",
-        description: error.message || "Could not complete the transaction. Please try again.",
+        title: "Transaction failed",
+        description: error.message || "There was an error processing your transaction. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -182,225 +171,227 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
     }
   };
 
-  // Handle PIN form submission
-  const onPinSubmit = (values: { pin: string }) => {
-    completeSendMoney(values.pin);
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
   };
 
-  // Handle QR code detection
-  const handleQrCodeDetected = (walletAddress: string) => {
-    form.setValue('recipient', walletAddress);
-    setShowQrScanner(false);
-    toast({
-      title: "Wallet Address Detected",
-      description: `Recipient address: ${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}`
-    });
+  const copyTransactionId = async () => {
+    try {
+      await navigator.clipboard.writeText(transactionId);
+      toast({
+        title: "Copied!",
+        description: "Transaction ID copied to clipboard.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again or copy manually.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <>
-      {isCheckingPin ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
-      ) : !hasPin ? (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-amber-800 mb-2">Transaction PIN Required</h3>
-          <p className="text-amber-700 mb-4">
-            You need to set up a transaction PIN before you can send money. This helps keep your account secure.
-          </p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="recipient"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Recipient Address</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter wallet address"
+                    autoComplete="off"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Enter the GCoin wallet address of the recipient.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Amount (GCoins)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0.01"
+                    onChange={(e) => {
+                      const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                      field.onChange(value);
+                    }}
+                    value={field.value?.toString() || ""}
+                  />
+                </FormControl>
+                <FormDescription className="flex flex-col">
+                  <span>Enter the amount of GCoins to send.</span>
+                  {watchAmount && !isNaN(watchAmount) && (
+                    <div className="mt-2 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span>Transaction Fee:</span>
+                        <span className="font-medium">{fee.toFixed(2)} GCoins</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-500">
+                        <span>{feeDescription}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1 pt-1 border-t border-gray-100">
+                        <span className="font-medium">Total:</span>
+                        <span className="font-medium">
+                          {watchAmount ? (watchAmount + fee).toFixed(2) : "0.00"} GCoins
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="note"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Note (Optional)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Add a note to this transaction"
+                    className="resize-none"
+                    {...field}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Add a note that will be visible to the recipient.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
           <Button
-            onClick={() => {
-              // Navigate to the Settings page, PIN tab
-              window.location.href = "/settings?tab=pin";
-            }}
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting}
           >
-            Set Up PIN Now
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Send GCoins
+              </>
+            )}
           </Button>
-        </div>
-      ) : (
-        <div className={`space-y-6 transition-all duration-500 ${isAnimated ? 'opacity-100' : 'opacity-0'}`}>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Recipient Field */}
-              <FormField
-                control={form.control}
-                name="recipient"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Wallet Address</FormLabel>
-                    <div className="flex gap-2">
-                      <FormControl>
-                        <Input placeholder="Enter wallet address (gCoin...)" {...field} />
-                      </FormControl>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => setShowQrScanner(true)}
-                      >
-                        <Scan className="h-4 w-4" />
+        </form>
+      </Form>
+      
+      <Dialog open={showSuccessDialog} onOpenChange={handleCloseSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg flex items-center justify-center">
+              <span className="animate-bounce inline-block mr-2">🎉</span>
+              Transfer Successful
+              <span className="animate-bounce inline-block ml-2">🎉</span>
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Your GCoins have been sent successfully
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-4 bg-gradient-to-r from-gcoin-blue/5 to-gcoin-yellow/5 rounded-lg border border-gcoin-blue/10 space-y-4">
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full bg-green-100 p-3">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            
+            {transactionDetails && (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Amount:</span>
+                  <span className="font-medium">{transactionDetails.amount.toFixed(2)} GCoins</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Fee:</span>
+                  <span className="font-medium">{transactionDetails.fee.toFixed(2)} GCoins</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200">
+                  <span className="text-sm text-gray-500">Total:</span>
+                  <span className="font-medium">{transactionDetails.total.toFixed(2)} GCoins</span>
+                </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">To:</span>
+                    <span className="font-medium text-sm">{`${transactionDetails.recipient.substring(0, 8)}...${transactionDetails.recipient.substring(transactionDetails.recipient.length - 8)}`}</span>
+                  </div>
+                </div>
+                {transactionDetails.note && (
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm text-gray-500">Note:</span>
+                      <span className="font-medium text-sm text-right max-w-[70%]">{transactionDetails.note}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Transaction ID:</span>
+                    <div className="flex items-center">
+                      <span className="font-mono text-xs bg-gray-100 py-1 px-2 rounded cursor-pointer hover:bg-gray-200" onClick={copyTransactionId}>
+                        {transactionId}
+                      </span>
+                      <Button variant="ghost" size="sm" onClick={copyTransactionId} className="ml-1 h-auto p-1">
+                        <span className="sr-only">Copy</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                        </svg>
                       </Button>
                     </div>
-                    <FormDescription>
-                      Enter the recipient's GCoin wallet address or scan their QR code
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Amount Field */}
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                          G
-                        </span>
-                        <Input className="pl-7" placeholder="0.00" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Enter the amount of GCoins to send
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Note Field */}
-              <FormField
-                control={form.control}
-                name="note"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Note (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Add a note for this transaction" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Add a message for the recipient
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full" 
-                size="lg"
-              >
-                <SendHorizontal className="w-4 h-4 mr-2" />
-                Continue
-              </Button>
-            </form>
-          </Form>
-          
-          {/* User balance display */}
-          <div className="text-center pt-2">
-            <p className="text-sm text-gray-500">
-              Available balance: <span className="font-medium text-gray-700">{user?.balance?.toLocaleString()} GCoins</span>
-            </p>
-          </div>
-
-          {/* QR Scanner Dialog */}
-          <Dialog open={showQrScanner} onOpenChange={setShowQrScanner}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Scan QR Code</DialogTitle>
-                <DialogDescription>
-                  Scan a QR code to get the wallet address
-                </DialogDescription>
-              </DialogHeader>
-              <QrCodeScanner 
-                onCodeDetected={handleQrCodeDetected}
-                onClose={() => setShowQrScanner(false)}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* PIN Verification Dialog */}
-          <Dialog open={showPinDialog} onOpenChange={(open) => {
-            if (!open) {
-              setPendingTransaction(null);
-              pinForm.reset();
-            }
-            setShowPinDialog(open);
-          }}>
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>Enter Transaction PIN</DialogTitle>
-                <DialogDescription>
-                  Please enter your 6-digit transaction PIN to confirm this transfer
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...pinForm}>
-                <form onSubmit={pinForm.handleSubmit(onPinSubmit)} className="space-y-6">
-                  <FormField
-                    control={pinForm.control}
-                    name="pin"
-                    render={({ field }) => (
-                      <FormItem className="mx-auto">
-                        <FormControl>
-                          <InputOTP maxLength={6} {...field}>
-                            <InputOTPGroup className="gap-2">
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex gap-3">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => {
-                        setShowPinDialog(false);
-                        setPendingTransaction(null);
-                        pinForm.reset();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      className="flex-1"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        "Confirm"
-                      )}
-                    </Button>
                   </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
+                </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Date & Time:</span>
+                    <span className="font-medium text-sm">
+                      {new Intl.DateTimeFormat('en-US', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      }).format(transactionDetails.date)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-6 text-center">
+              <Button 
+                onClick={handleCloseSuccessDialog}
+                className="bg-gradient-to-r from-gcoin-blue to-gcoin-blue/80 hover:from-gcoin-blue/90 hover:to-gcoin-blue"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
+
+export default SendMoneyForm;

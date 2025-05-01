@@ -9,51 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_accounts: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          wallet_address: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          wallet_address: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          wallet_address?: string
-        }
-        Relationships: []
-      }
-      currencies: {
-        Row: {
-          code: string
-          created_at: string
-          id: string
-          name: string
-          symbol: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          id?: string
-          name: string
-          symbol: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          id?: string
-          name?: string
-          symbol?: string
-        }
-        Relationships: []
-      }
       exchange_rates: {
         Row: {
           currency: string
@@ -117,27 +72,6 @@ export type Database = {
           updated_at?: string
           username?: string
           wallet_address?: string
-        }
-        Relationships: []
-      }
-      transaction_pins: {
-        Row: {
-          created_at: string
-          pin: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          pin: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          pin?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -222,10 +156,6 @@ export type Database = {
         Args: { p_transaction_id: string; p_user_id: string; p_updates: Json }
         Returns: undefined
       }
-      buy_gcoin: {
-        Args: { currency_code: string; currency_amount: number }
-        Returns: string
-      }
       get_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -236,24 +166,9 @@ export type Database = {
           email: string
         }[]
       }
-      sell_gcoin: {
-        Args: { gcoin_amount: number; currency_code: string }
-        Returns: string
-      }
       send_money: {
-        Args:
-          | { amount: number; recipient_wallet: string; note?: string }
-          | {
-              amount: number
-              recipient_wallet: string
-              pin: string
-              note?: string
-            }
+        Args: { amount: number; recipient_wallet: string; note?: string }
         Returns: string
-      }
-      verify_transaction_pin: {
-        Args: { input_pin: string }
-        Returns: boolean
       }
     }
     Enums: {

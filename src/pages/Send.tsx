@@ -1,24 +1,17 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import { SendMoneyForm } from "@/components/SendMoneyForm";
-
-// Parse query params
-function useQuery() {
-  return new URLSearchParams(useLocation().search);
-}
+import SendMoneyForm from "@/components/SendMoneyForm";
 
 const Send = () => {
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
-  const query = useQuery();
-  const addressFromQR = query.get('address');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,16 +20,6 @@ const Send = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    // Show toast if we got an address from QR code
-    if (addressFromQR) {
-      toast({
-        title: "Address Scanned",
-        description: `Recipient address: ${addressFromQR.substring(0, 8)}...${addressFromQR.substring(addressFromQR.length - 8)}`,
-      });
-    }
-  }, [addressFromQR, toast]);
 
   const handleTransactionSuccess = () => {
     toast({
@@ -67,10 +50,7 @@ const Send = () => {
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <SendMoneyForm 
-              onSuccess={handleTransactionSuccess} 
-              initialRecipient={addressFromQR || ''}
-            />
+            <SendMoneyForm onSuccess={handleTransactionSuccess} />
           </div>
         </div>
       </main>

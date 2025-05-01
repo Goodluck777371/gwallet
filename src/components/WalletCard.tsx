@@ -1,11 +1,12 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import QrCodeScanner from "./QrCodeScanner";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ interface WalletCardProps {
 const WalletCard = ({ className }: WalletCardProps) => {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const { user } = useAuth();
   
   const walletAddress = user?.wallet_address || '';
@@ -63,6 +65,12 @@ const WalletCard = ({ className }: WalletCardProps) => {
     style: 'currency',
     currency: 'NGN'
   }).format(nairaEquivalent);
+
+  const handleQRCodeDetected = (walletAddress: string) => {
+    // Navigate to send page with pre-filled recipient address
+    window.location.href = `/send?address=${encodeURIComponent(walletAddress)}`;
+    setShowScanner(false);
+  };
 
   return (
     <div className={cn(
@@ -131,13 +139,33 @@ const WalletCard = ({ className }: WalletCardProps) => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <Link to="/send">
+        <div className="grid grid-cols-4 gap-2 mt-6">
+          <Link to="/buy" className="col-span-1">
             <Button 
-              className="bg-gcoin-blue/10 hover:bg-gcoin-blue/20 text-gcoin-blue flex items-center justify-center space-x-2 font-medium text-sm h-12 w-full"
+              className="bg-green-500/10 hover:bg-green-500/20 text-green-600 flex flex-col items-center justify-center font-medium text-xs h-16 w-full py-1 px-0"
               variant="ghost"
             >
-              <ArrowUpRight className="h-4 w-4 mr-1.5" />
+              <DollarSign className="h-4 w-4 mb-1" />
+              <span>Buy</span>
+            </Button>
+          </Link>
+
+          <Link to="/sell" className="col-span-1">
+            <Button 
+              className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 flex flex-col items-center justify-center font-medium text-xs h-16 w-full py-1 px-0"
+              variant="ghost"
+            >
+              <DollarSign className="h-4 w-4 mb-1" />
+              <span>Sell</span>
+            </Button>
+          </Link>
+          
+          <Link to="/send" className="col-span-1">
+            <Button 
+              className="bg-gcoin-blue/10 hover:bg-gcoin-blue/20 text-gcoin-blue flex flex-col items-center justify-center font-medium text-xs h-16 w-full py-1 px-0"
+              variant="ghost"
+            >
+              <ArrowUpRight className="h-4 w-4 mb-1" />
               <span>Send</span>
             </Button>
           </Link>
@@ -145,10 +173,10 @@ const WalletCard = ({ className }: WalletCardProps) => {
           <Dialog>
             <DialogTrigger asChild>
               <Button 
-                className="bg-gcoin-yellow/10 hover:bg-gcoin-yellow/20 text-gcoin-yellow flex items-center justify-center space-x-2 font-medium text-sm h-12"
+                className="bg-gcoin-yellow/10 hover:bg-gcoin-yellow/20 text-gcoin-yellow flex flex-col items-center justify-center font-medium text-xs h-16 w-full py-1 px-0"
                 variant="ghost"
               >
-                <ArrowDownLeft className="h-4 w-4 mr-1.5" />
+                <ArrowDownLeft className="h-4 w-4 mb-1" />
                 <span>Receive</span>
               </Button>
             </DialogTrigger>
@@ -164,15 +192,12 @@ const WalletCard = ({ className }: WalletCardProps) => {
                 <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-4">
                   <div className="bg-gcoin-yellow/10 p-6 rounded-lg">
                     <div className="bg-white p-1 rounded-md">
-                      {/* Placeholder for a QR code - in production you would use a QR code library */}
-                      <div className="h-48 w-48 grid grid-cols-10 grid-rows-10 gap-0.5">
-                        {Array.from({ length: 100 }).map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`w-full h-full ${Math.random() > 0.7 ? 'bg-black' : 'bg-transparent'}`}
-                          />
-                        ))}
-                      </div>
+                      {/* QR code for wallet address */}
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${walletAddress}`}
+                        alt="Wallet QR Code"
+                        className="h-48 w-48" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -206,6 +231,33 @@ const WalletCard = ({ className }: WalletCardProps) => {
             </DialogContent>
           </Dialog>
         </div>
+
+        <div className="mt-4">
+          <Button 
+            variant="outline" 
+            className="w-full flex items-center justify-center"
+            onClick={() => setShowScanner(true)}
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            <span>Scan QR Code</span>
+          </Button>
+        </div>
+
+        {/* QR Code Scanner Dialog */}
+        <Dialog open={showScanner} onOpenChange={setShowScanner}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Scan QR Code</DialogTitle>
+              <DialogDescription>
+                Scan a wallet address QR code to send GCoins
+              </DialogDescription>
+            </DialogHeader>
+            <QrCodeScanner 
+              onCodeDetected={handleQRCodeDetected} 
+              onClose={() => setShowScanner(false)} 
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

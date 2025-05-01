@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
+import Buy from "./pages/Buy";
+import Sell from "./pages/Sell";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -54,20 +56,23 @@ const AppRoutes = () => (
     <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
+    <Route path="/buy" element={<ProtectedRoute><Buy /></ProtectedRoute>} />
+    <Route path="/sell" element={<ProtectedRoute><Sell /></ProtectedRoute>} />
     <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
 
+// Fixed: Changed the order - BrowserRouter should be the outermost router-related wrapper
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <Toaster />
+          <Sonner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

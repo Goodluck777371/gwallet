@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2, Bell, Shield, User, Key } from "lucide-react";
+import { Loader2, Bell, Shield, User, Key, Lock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import Header from "@/components/Header";
+import TransactionPinManager from "@/components/TransactionPinManager";
 import { updateProfile } from "@/integrations/supabase/updateProfile";
 
 const profileFormSchema = z.object({
@@ -198,6 +199,20 @@ const Settings = () => {
     }
   };
 
+  const handlePinCreated = () => {
+    toast({
+      title: "Transaction PIN Set",
+      description: "Your transaction PIN has been created successfully.",
+    });
+  };
+
+  const handlePinReset = () => {
+    toast({
+      title: "Transaction PIN Reset",
+      description: "Your transaction PIN has been reset successfully.",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -215,7 +230,7 @@ const Settings = () => {
           
           <div className={`transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
+              <TabsList className="grid grid-cols-4 w-full max-w-md mb-8">
                 <TabsTrigger value="profile" className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
                   Profile
@@ -223,6 +238,10 @@ const Settings = () => {
                 <TabsTrigger value="security" className="flex items-center">
                   <Shield className="h-4 w-4 mr-2" />
                   Security
+                </TabsTrigger>
+                <TabsTrigger value="pin" className="flex items-center">
+                  <Lock className="h-4 w-4 mr-2" />
+                  PIN
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="flex items-center">
                   <Bell className="h-4 w-4 mr-2" />
@@ -382,6 +401,16 @@ const Settings = () => {
                       </Button>
                     </div>
                   </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="pin">
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-xl font-semibold mb-6">Transaction PIN</h2>
+                  <TransactionPinManager 
+                    onPinCreated={handlePinCreated}
+                    onPinReset={handlePinReset}
+                  />
                 </div>
               </TabsContent>
               

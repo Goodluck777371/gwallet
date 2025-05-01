@@ -17,7 +17,7 @@ export interface AppUser {
 // Auth context type
 interface AuthContextType {
   user: AppUser | null;
-  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>; // Added setUser
+  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>; 
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -163,10 +163,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
       
@@ -174,7 +178,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Auth state change will handle the rest
+      // We don't need to update state here as the auth state listener will handle it
+      // Just show a loading message
+      toast({
+        title: "Redirecting to Google",
+        description: "Please complete the login process in the popup window.",
+      });
+      
     } catch (error: any) {
       toast({
         title: "Google sign-in failed",
@@ -268,7 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        setUser, // Added setUser to the context
+        setUser,
         isAuthenticated: !!user,
         isLoading,
         login,

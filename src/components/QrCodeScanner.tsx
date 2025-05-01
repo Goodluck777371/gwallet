@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface QrCodeScannerProps {
   onCodeDetected: (walletAddress: string) => void;
@@ -15,18 +15,24 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 }) => {
   const [scanning, setScanning] = useState(false);
   const [hasCamera, setHasCamera] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if camera is available
     Html5Qrcode.getCameras()
       .then(devices => {
         setHasCamera(devices.length > 0);
+        if (devices.length === 0) {
+          setCameraError("No cameras detected on your device");
+        }
       })
       .catch(err => {
         console.error('Error checking for cameras:', err);
         setHasCamera(false);
+        setCameraError("Error accessing camera. Please make sure you've granted camera permissions.");
       });
     
     // Cleanup scanner when component unmounts
@@ -37,63 +43,91 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     };
   }, []);
 
-  const startScanner = () => {
+  const startScanner = async () => {
     if (!containerRef.current) return;
     
-    const scannerId = "qr-scanner";
-    // Create scanner element if it doesn't exist
-    if (!document.getElementById(scannerId)) {
-      const scannerDiv = document.createElement("div");
-      scannerDiv.id = scannerId;
-      containerRef.current.appendChild(scannerDiv);
-    }
-    
-    const scanner = new Html5Qrcode(scannerId);
-    scannerRef.current = scanner;
-    
-    setScanning(true);
-    
-    const qrCodeSuccessCallback = (decodedText: string) => {
-      // Stop scanning
-      scanner.stop().then(() => {
-        setScanning(false);
-        
-        // Check if the scanned text is a valid wallet address
-        // This is just a basic check, you might want to add more validation
-        if (decodedText.startsWith('gCoin')) {
-          onCodeDetected(decodedText);
-        } else {
+    try {
+      const scannerId = "qr-scanner";
+      // Create scanner element if it doesn't exist
+      if (!document.getElementById(scannerId)) {
+        const scannerDiv = document.createElement("div");
+        scannerDiv.id = scannerId;
+        scannerDiv.style.width = "100%";
+        scannerDiv.style.height = "100%";
+        containerRef.current.appendChild(scannerDiv);
+      }
+      
+      // Request camera permission explicitly
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      const scanner = new Html5Qrcode(scannerId);
+      scannerRef.current = scanner;
+      
+      setScanning(true);
+      setCameraError(null);
+      
+      const qrCodeSuccessCallback = (decodedText: string) => {
+        // Stop scanning
+        scanner.stop().then(() => {
+          setScanning(false);
+          
+          // Check if the scanned text is a valid wallet address
+          // This is just a basic check, you might want to add more validation
+          if (decodedText.startsWith('gCoin')) {
+            onCodeDetected(decodedText);
+          } else {
+            toast({
+              title: "Invalid QR Code",
+              description: "The scanned QR code does not contain a valid wallet address.",
+              variant: "destructive",
+            });
+          }
+        }).catch(error => {
+          console.error('Error stopping scanner:', error);
+        });
+      };
+      
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: window.innerWidth < 768 ? 1.0 : 1.33, // Adjust aspect ratio for mobile
+        formatsToSupport: [Html5Qrcode.FORMATS.QR_CODE]
+      };
+      
+      // Try to start camera with environment facing camera first (rear camera)
+      scanner.start(
+        { facingMode: "environment" },
+        config,
+        qrCodeSuccessCallback,
+        undefined
+      ).catch((error) => {
+        // If environment camera fails, try user facing camera (front camera)
+        scanner.start(
+          { facingMode: "user" },
+          config,
+          qrCodeSuccessCallback,
+          undefined
+        ).catch((error) => {
+          console.error('Error starting scanner:', error);
+          setScanning(false);
+          setCameraError("Could not start the scanner. Please make sure camera permissions are granted.");
           toast({
-            title: "Invalid QR Code",
-            description: "The scanned QR code does not contain a valid wallet address.",
+            title: "Scanner Error",
+            description: "Could not start the scanner. Please make sure camera permissions are granted.",
             variant: "destructive",
           });
-        }
-      }).catch(error => {
-        console.error('Error stopping scanner:', error);
+        });
       });
-    };
-    
-    const config = {
-      fps: 10,
-      aspectRatio: 1,
-      qrbox: { width: 250, height: 250 },
-    };
-    
-    scanner.start(
-      { facingMode: "environment" },
-      config,
-      qrCodeSuccessCallback,
-      undefined
-    ).catch((error) => {
-      console.error('Error starting scanner:', error);
+    } catch (error) {
+      console.error('Camera access error:', error);
       setScanning(false);
+      setCameraError("Failed to access camera. Please grant permission when prompted.");
       toast({
-        title: "Scanner Error",
-        description: "Could not start the scanner. Please make sure camera permissions are granted.",
+        title: "Camera Permission Required",
+        description: "Please allow access to your camera to scan QR codes.",
         variant: "destructive",
       });
-    });
+    }
   };
   
   const stopScanner = () => {
@@ -110,12 +144,21 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   };
   
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full">
       <div 
         ref={containerRef}
-        className="bg-gray-100 rounded-xl overflow-hidden w-full h-72 relative flex items-center justify-center mb-4"
+        className="bg-gray-100 rounded-xl overflow-hidden w-full h-72 md:h-80 relative flex items-center justify-center mb-4"
       >
-        {!scanning && !hasCamera && (
+        {!scanning && cameraError && (
+          <div className="text-center p-4">
+            <p className="text-red-500 font-medium mb-2">{cameraError}</p>
+            <p className="text-gray-500 text-sm">
+              Please make sure your device has a camera and the browser has permission to access it.
+            </p>
+          </div>
+        )}
+        
+        {!scanning && !cameraError && !hasCamera && (
           <div className="text-center p-4">
             <p className="text-red-500 font-medium mb-2">No camera detected</p>
             <p className="text-gray-500 text-sm">
@@ -124,7 +167,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
           </div>
         )}
         
-        {!scanning && hasCamera && (
+        {!scanning && !cameraError && hasCamera && (
           <div className="text-center p-4">
             <div className="h-16 w-16 mx-auto mb-4 text-gray-300">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

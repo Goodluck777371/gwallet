@@ -25,6 +25,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import Header from "@/components/Header";
+import { updateProfile } from "@/integrations/supabase/updateProfile";
 
 const profileFormSchema = z.object({
   username: z.string().min(3, {
@@ -56,7 +57,7 @@ const notificationsFormSchema = z.object({
 });
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
@@ -79,6 +80,16 @@ const Settings = () => {
     },
   });
 
+  // Reset form when user data changes
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        username: user.username || "",
+        email: user.email || "",
+      });
+    }
+  }, [user, profileForm]);
+
   const passwordForm = useForm<z.infer<typeof passwordFormSchema>>({
     resolver: zodResolver(passwordFormSchema),
     defaultValues: {
@@ -98,48 +109,51 @@ const Settings = () => {
     },
   });
 
-const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
-  setIsProfileSubmitting(true);
-  try {
-    // Replace this with actual Supabase update query
-    const { error } = await supabase
-      .from('profiles')
-      .update({
+  const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+    setIsProfileSubmitting(true);
+    try {
+      // Use the updateProfile function from our Supabase integration
+      const { success, error } = await updateProfile({
         username: values.username,
         email: values.email,
-        // Include other fields you want to update
-      })
-      .eq('id', user.id); // Ensure you match the correct user by ID
+      });
 
-    if (error) {
-      throw error;
+      if (!success) {
+        throw error;
+      }
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile information has been updated successfully.",
+      });
+
+      // Refresh the user profile in our context
+      await refreshProfile();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Failed to update profile",
+        description: "There was a problem updating your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProfileSubmitting(false);
     }
-
-    // Show success message only if the update is successful
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been updated successfully.",
-    });
-
-    // Optionally refresh the user profile
-    await refreshProfile();
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    toast({
-      title: "Failed to update profile",
-      description: "There was a problem updating your profile. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsProfileSubmitting(false);
-  }
-};
+  };
 
   const onPasswordSubmit = async (values: z.infer<typeof passwordFormSchema>) => {
     setIsPasswordSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Update the user's password through Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: values.newPassword,
+      });
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Password updated",
@@ -151,10 +165,10 @@ const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
         newPassword: "",
         confirmPassword: "",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Failed to update password",
-        description: "There was a problem updating your password. Please try again.",
+        description: error.message || "There was a problem updating your password. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -165,7 +179,8 @@ const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
   const onNotificationsSubmit = async (values: z.infer<typeof notificationsFormSchema>) => {
     setIsNotificationsSubmitting(true);
     try {
-      // Simulate API call
+      // In a real app, you would save these preferences to the user's profile in Supabase
+      // This is a placeholder for now
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({

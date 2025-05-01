@@ -1,3 +1,4 @@
+
 import { supabase } from './client';
 
 /**
@@ -35,13 +36,25 @@ export const updateProfile = async (
 
     // Update the profile in the database
     const { data, error } = await supabase
-      .from('profiles') // Table name
-      .update(updates) // Fields to update
-      .eq('id', userId); // Automatically match the user by their authenticated ID
+      .from('profiles') 
+      .update(updates) 
+      .eq('id', userId);
 
     if (error) {
       console.error('Error updating profile:', error);
       return { success: false, error };
+    }
+
+    // If we're updating the email, we also need to update it in auth
+    if (updates.email && updates.email !== session.user.email) {
+      const { error: emailUpdateError } = await supabase.auth.updateUser({
+        email: updates.email,
+      });
+      
+      if (emailUpdateError) {
+        console.error('Error updating email in auth:', emailUpdateError);
+        return { success: false, error: emailUpdateError };
+      }
     }
 
     console.log('Profile updated successfully:', data);

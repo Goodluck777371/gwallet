@@ -2,14 +2,28 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import BuySellForm from "@/components/BuySellForm";
+import PaystackPayment from "@/components/PaystackPayment";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Buy = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState({
+    amount: 0,
+    gcoinsAmount: 0
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -19,12 +33,20 @@ const Buy = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSuccess = () => {
-    toast({
-      title: "Purchase Successful! 🎉",
-      description: "Your GCoins have been added to your wallet.",
-      variant: "credit",
+  const handleSuccess = (amount: number, gcoinsAmount: number) => {
+    // Instead of showing toast right away, open payment dialog
+    setPaymentDetails({
+      amount,
+      gcoinsAmount
     });
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentDialog(false);
+    
+    // This toast will now be shown by PaystackPayment component
+    // after successful payment
   };
 
   return (
@@ -52,6 +74,28 @@ const Buy = () => {
           </div>
         </div>
       </main>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Your Purchase</DialogTitle>
+            <DialogDescription>
+              You're buying {paymentDetails.gcoinsAmount} GCoins for ₦{paymentDetails.amount.toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <PaystackPayment 
+              amount={paymentDetails.amount} 
+              email={user?.email || ''}
+              gcoinsAmount={paymentDetails.gcoinsAmount}
+              onSuccess={handlePaymentSuccess}
+              onClose={() => setShowPaymentDialog(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

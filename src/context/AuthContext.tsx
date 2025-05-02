@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +16,6 @@ export interface AppUser {
 // Auth context type
 interface AuthContextType {
   user: AppUser | null;
-  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>; // Added setUser
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -268,7 +266,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        setUser, // Added setUser to the context
         isAuthenticated: !!user,
         isLoading,
         login,

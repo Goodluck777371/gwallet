@@ -1,106 +1,78 @@
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, AlertCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { ArrowDownUp, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/Header";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useAuth } from "@/context/AuthContext";
-
-// Define currency types
-interface Currency {
-  code: string;
-  name: string;
-  symbol: string;
-  rate: number;
-}
-
-const currencies: Currency[] = [
-  { code: "NGN", name: "Nigerian Naira", symbol: "₦", rate: 850 },
-  { code: "USD", name: "US Dollar", symbol: "$", rate: 1.2 },
-  { code: "EUR", name: "Euro", symbol: "€", rate: 1.05 },
-  { code: "GBP", name: "British Pound", symbol: "£", rate: 0.95 },
-  { code: "GHS", name: "Ghanaian Cedi", symbol: "₵", rate: 18.5 },
-  { code: "KES", name: "Kenyan Shilling", symbol: "KSh", rate: 185 },
-  { code: "ZAR", name: "South African Rand", symbol: "R", rate: 22.5 },
-];
+import { toast } from "@/hooks/use-toast";
+import Header from "@/components/Header";
 
 const Exchange = () => {
-  const { toast } = useToast();
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [fromCurrency, setFromCurrency] = useState("GCoin");
-  const [toCurrency, setToCurrency] = useState("NGN");
-  const [fromAmount, setFromAmount] = useState<string>("1");
-  const [toAmount, setToAmount] = useState<string>("850");
-  const { user } = useAuth();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Find selected currency
-  const selectedCurrency = currencies.find(c => c.code === toCurrency);
-
-  // Calculate exchange rate
-  const calculateExchange = (amount: string, from: string, to: string) => {
-    const numAmount = parseFloat(amount) || 0;
-    
-    if (from === "GCoin" && to !== "GCoin") {
-      const currency = currencies.find(c => c.code === to);
-      return currency ? (numAmount * currency.rate).toFixed(2) : "0";
-    } else if (from !== "GCoin" && to === "GCoin") {
-      const currency = currencies.find(c => c.code === from);
-      return currency ? (numAmount / currency.rate).toFixed(6) : "0";
+  const [amount, setAmount] = useState("");
+  const [fromCurrency, setFromCurrency] = useState("gcoin");
+  const [toCurrency, setToCurrency] = useState("ngn");
+  const [convertedAmount, setConvertedAmount] = useState("");
+  
+  const exchangeRates = {
+    gcoin_to_ngn: 850,
+    gcoin_to_usd: 0.6,
+    ngn_to_gcoin: 1/850,
+    usd_to_gcoin: 1/0.6,
+  };
+  
+  const handleCalculate = () => {
+    if (!amount || isNaN(Number(amount))) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid number",
+        variant: "destructive",
+      });
+      return;
     }
     
-    return "0";
+    const numAmount = Number(amount);
+    let exchangeRate;
+    
+    if (fromCurrency === "gcoin" && toCurrency === "ngn") {
+      exchangeRate = exchangeRates.gcoin_to_ngn;
+    } else if (fromCurrency === "gcoin" && toCurrency === "usd") {
+      exchangeRate = exchangeRates.gcoin_to_usd;
+    } else if (fromCurrency === "ngn" && toCurrency === "gcoin") {
+      exchangeRate = exchangeRates.ngn_to_gcoin;
+    } else if (fromCurrency === "usd" && toCurrency === "gcoin") {
+      exchangeRate = exchangeRates.usd_to_gcoin;
+    } else {
+      exchangeRate = 1;
+    }
+    
+    const converted = (numAmount * exchangeRate).toFixed(2);
+    setConvertedAmount(converted);
   };
-
-  // Handle amount change
-  const handleFromAmountChange = (value: string) => {
-    setFromAmount(value);
-    setToAmount(calculateExchange(value, fromCurrency, toCurrency));
-  };
-
-  const handleToAmountChange = (value: string) => {
-    setToAmount(value);
-    setFromAmount(calculateExchange(value, toCurrency, fromCurrency));
-  };
-
-  // Handle currency change
-  const handleToCurrencyChange = (value: string) => {
-    setToCurrency(value);
-    setToAmount(calculateExchange(fromAmount, fromCurrency, value));
-  };
-
-  // Handle exchange
+  
   const handleExchange = () => {
     toast({
-      title: "Coming Soon! 🚀",
-      description: "Currency exchange feature will be available soon.",
+      title: "Coming Soon",
+      description: "Currency exchange is coming soon!",
       variant: "default",
     });
   };
+  
+  const handleSwapCurrencies = () => {
+    setFromCurrency(toCurrency);
+    setToCurrency(fromCurrency);
+    setAmount(convertedAmount);
+    setConvertedAmount(amount);
+  };
 
-  // Format balance with selected currency
-  const formatBalance = () => {
-    const balance = user?.balance || 0;
-    const selectedCurrency = currencies.find(c => c.code === toCurrency);
-    
-    if (selectedCurrency) {
-      const convertedAmount = balance * selectedCurrency.rate;
-      return `${selectedCurrency.symbol}${convertedAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  const formatCurrencySymbol = (currency: string) => {
+    switch (currency) {
+      case "ngn": return "₦";
+      case "usd": return "$";
+      case "gcoin": return "G";
+      default: return "";
     }
-    
-    return `${balance.toLocaleString('en-US', { maximumFractionDigits: 2 })} GCoin`;
   };
 
   return (
@@ -108,106 +80,94 @@ const Exchange = () => {
       <Header />
       
       <main className="pt-20 pb-16 px-4">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-lg mx-auto">
           <div className="mb-8">
-            <Link to="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-4">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Dashboard
-            </Link>
-            
-            <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Exchange
-            </h1>
-            <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Convert your GCoins to other currencies
-            </p>
+            <h1 className="text-3xl font-bold">Exchange Currencies</h1>
+            <p className="text-gray-500">Calculate and convert between different currencies</p>
           </div>
           
-          <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Exchange GCoin</CardTitle>
-                <CardDescription>
-                  Current Balance: {user?.balance.toLocaleString()} GCoin
-                  {toCurrency !== "GCoin" && (
-                    <span className="block text-sm text-gray-500">≈ {formatBalance()} in {toCurrency}</span>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">From</label>
-                  <div className="flex space-x-2">
-                    <Select disabled value={fromCurrency} onValueChange={() => {}}>
-                      <SelectTrigger className="w-1/3">
-                        <SelectValue placeholder="GCoin" />
+          <Card className="p-6">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium mb-1 block">Amount</label>
+                    <Input
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Enter amount"
+                      type="number"
+                    />
+                  </div>
+                  <div>
+                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Currency" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="GCoin">GCoin</SelectItem>
+                        <SelectItem value="gcoin">GCoin</SelectItem>
+                        <SelectItem value="ngn">NGN</SelectItem>
+                        <SelectItem value="usd">USD</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      type="number"
-                      value={fromAmount}
-                      onChange={(e) => handleFromAmountChange(e.target.value)}
-                      className="flex-1"
-                      placeholder="0.00"
-                      min="0"
-                    />
                   </div>
                 </div>
                 
                 <div className="flex justify-center">
-                  <div className="bg-gray-100 p-2 rounded-full">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M7 10L12 15L17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
+                  <Button variant="outline" size="icon" onClick={handleSwapCurrencies} className="rounded-full">
+                    <ArrowDownUp className="h-4 w-4" />
+                  </Button>
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">To</label>
-                  <div className="flex space-x-2">
-                    <Select value={toCurrency} onValueChange={handleToCurrencyChange}>
-                      <SelectTrigger className="w-1/3">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currencies.map((currency) => (
-                          <SelectItem key={currency.code} value={currency.code}>
-                            {currency.symbol} {currency.code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium mb-1 block">Converted Amount</label>
                     <Input
-                      type="number"
-                      value={toAmount}
-                      onChange={(e) => handleToAmountChange(e.target.value)}
-                      className="flex-1"
-                      placeholder="0.00"
-                      min="0"
+                      value={convertedAmount}
+                      readOnly
+                      placeholder="Converted amount"
                     />
                   </div>
+                  <div>
+                    <Select value={toCurrency} onValueChange={setToCurrency}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Currency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gcoin">GCoin</SelectItem>
+                        <SelectItem value="ngn">NGN</SelectItem>
+                        <SelectItem value="usd">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
-                <div className="pt-2">
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Exchange Rate</AlertTitle>
-                    <AlertDescription>
-                      1 GCoin = {selectedCurrency ? `${selectedCurrency.symbol}${selectedCurrency.rate.toLocaleString()}` : ''}
-                    </AlertDescription>
-                  </Alert>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Exchange Rate: 1 {fromCurrency.toUpperCase()} = 
+                    {fromCurrency === "gcoin" && toCurrency === "ngn" && ` ${exchangeRates.gcoin_to_ngn} NGN`}
+                    {fromCurrency === "gcoin" && toCurrency === "usd" && ` ${exchangeRates.gcoin_to_usd} USD`}
+                    {fromCurrency === "ngn" && toCurrency === "gcoin" && ` ${exchangeRates.ngn_to_gcoin.toFixed(4)} GCoin`}
+                    {fromCurrency === "usd" && toCurrency === "gcoin" && ` ${exchangeRates.usd_to_gcoin.toFixed(2)} GCoin`}
+                    {(fromCurrency === toCurrency) && ` 1 ${toCurrency.toUpperCase()}`}
+                  </p>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleExchange} className="w-full">
-                  Exchange GCoin (Coming Soon)
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Button onClick={handleCalculate} variant="outline">Calculate</Button>
+                <Button onClick={handleExchange}>Exchange Now</Button>
+              </div>
+              
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Information</AlertTitle>
+                <AlertDescription>
+                  Currency exchange is coming soon! For now, you can use the calculator to see current rates.
+                </AlertDescription>
+              </Alert>
+            </div>
+          </Card>
         </div>
       </main>
     </div>

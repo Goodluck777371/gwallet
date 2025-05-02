@@ -3,7 +3,7 @@
  * Calculate transaction fee based on amount
  * - 1% fee for transactions up to 50 Gcoins
  * - 5 Gcoins flat fee for transactions between 51-100 Gcoins
- * - 5% fee for transactions above 100 Gcoins
+ * - 10 Gcoins flat fee for transactions above 100 Gcoins
  */
 export const calculateTransactionFee = (amount: number): number => {
   if (amount <= 50) {
@@ -11,7 +11,7 @@ export const calculateTransactionFee = (amount: number): number => {
   } else if (amount <= 100) {
     return 5; // 5 GCoins flat fee
   } else {
-    return amount * 0.05; // 5% fee for transactions above 100
+    return 10; // 10 GCoins flat fee
   }
 };
 
@@ -33,24 +33,6 @@ export const getFeeDescription = (amount: number): string => {
   } else if (amount <= 100) {
     return "Flat fee of 5 GCoins";
   } else {
-    return "5% of transaction amount";
+    return "Flat fee of 10 GCoins";
   }
-};
-
-/**
- * Calculate staking reward based on amount and duration (in days)
- * 30% APR, prorated based on staking duration
- */
-export const calculateStakingReward = (amount: number, durationDays: number): number => {
-  // 30% annually = 0.3 / 365 daily rate
-  const dailyRate = 0.3 / 365; 
-  const reward = amount * dailyRate * durationDays;
-  return reward;
-};
-
-/**
- * Calculate early unstaking penalty (10% of initial stake)
- */
-export const calculateUnstakingPenalty = (amount: number): number => {
-  return amount * 0.1;
 };

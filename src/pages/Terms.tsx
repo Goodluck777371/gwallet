@@ -1,195 +1,256 @@
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import Header from "@/components/Header";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Header from "@/components/Header";
 
 const Terms = () => {
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+  const [activeTab, setActiveTab] = useState("terms");
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
-      <main className="pt-20 pb-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <Link to="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-4">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Dashboard
-            </Link>
+      <main className="max-w-4xl mx-auto px-4 pt-20 pb-16">
+        <Link to="/" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-6">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Home
+        </Link>
+        
+        <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
+          <Tabs defaultValue="terms" onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsTrigger value="terms">Terms & Conditions</TabsTrigger>
+              <TabsTrigger value="faq">FAQ</TabsTrigger>
+              <TabsTrigger value="support">Support</TabsTrigger>
+            </TabsList>
             
-            <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Legal & Support
-            </h1>
-            <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Terms, conditions, and helpful information
-            </p>
-          </div>
-          
-          <div className={`bg-white rounded-xl shadow-sm transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <Tabs defaultValue="terms" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="terms">Terms & Conditions</TabsTrigger>
-                <TabsTrigger value="faq">FAQ</TabsTrigger>
-                <TabsTrigger value="support">Support</TabsTrigger>
-              </TabsList>
+            <TabsContent value="terms" className="space-y-6">
+              <h1 className="text-3xl font-bold mb-6">Terms & Conditions</h1>
               
-              <TabsContent value="terms" className="p-6">
-                <div className="prose max-w-none">
-                  <h2>Terms and Conditions</h2>
-                  <p>Last updated: May 2, 2025</p>
+              <div className="prose max-w-none">
+                <h2>1. Introduction</h2>
+                <p>
+                  Welcome to GCoin, a digital currency platform that allows users to buy, sell, and transfer digital currency. These Terms and Conditions govern your use of our website, mobile applications, and services.
+                </p>
+                
+                <h2>2. Acceptance of Terms</h2>
+                <p>
+                  By accessing or using GCoin, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.
+                </p>
+                
+                <h2>3. Eligibility</h2>
+                <p>
+                  You must be at least 18 years old to use GCoin. By using our services, you represent and warrant that you are 18 years of age or older and have the legal capacity to enter into these terms.
+                </p>
+                
+                <h2>4. Account Registration</h2>
+                <p>
+                  To use GCoin, you must create an account. You agree to provide accurate and complete information during registration and to keep your account information updated.
+                </p>
+                
+                <h2>5. Privacy Policy</h2>
+                <p>
+                  Your use of GCoin is also governed by our Privacy Policy, which describes how we collect, use, and share your information.
+                </p>
+                
+                <h2>6. Transactions</h2>
+                <p>
+                  All transactions made through GCoin are subject to verification. We reserve the right to decline or delay any transaction if we suspect fraudulent activity or violation of our terms.
+                </p>
+                
+                <h2>7. Fees</h2>
+                <p>
+                  GCoin charges fees for certain transactions. These fees are clearly displayed before you confirm any transaction.
+                </p>
+                
+                <h2>8. Security</h2>
+                <p>
+                  You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.
+                </p>
+                
+                <h2>9. Termination</h2>
+                <p>
+                  We reserve the right to suspend or terminate your account at any time for any reason, including but not limited to violation of these terms.
+                </p>
+                
+                <h2>10. Changes to Terms</h2>
+                <p>
+                  We may modify these Terms and Conditions at any time. If we make material changes, we will provide notice as appropriate. Your continued use of GCoin after such modifications constitutes your acceptance of the updated terms.
+                </p>
+                
+                <h2>11. Limitation of Liability</h2>
+                <p>
+                  To the maximum extent permitted by law, GCoin shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.
+                </p>
+                
+                <h2>12. Governing Law</h2>
+                <p>
+                  These Terms and Conditions are governed by and construed in accordance with the laws of the jurisdiction in which GCoin is registered.
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="faq" className="space-y-6">
+              <h1 className="text-3xl font-bold mb-6">Frequently Asked Questions</h1>
+              
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>What is GCoin?</AccordionTrigger>
+                  <AccordionContent>
+                    GCoin is a digital currency platform that allows users to buy, sell, and transfer digital currency easily and securely.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>How do I create a GCoin account?</AccordionTrigger>
+                  <AccordionContent>
+                    You can create a GCoin account by clicking on the "Register" button on our homepage and following the registration process. You'll need to provide some personal information and verify your email address.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>How do I buy GCoins?</AccordionTrigger>
+                  <AccordionContent>
+                    Once you've created an account, you can buy GCoins by navigating to the "Buy" section, selecting the amount you wish to purchase, and completing the payment process using your preferred payment method.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-4">
+                  <AccordionTrigger>What are the fees for transactions?</AccordionTrigger>
+                  <AccordionContent>
+                    GCoin charges a 3% fee for most transactions. This fee is automatically calculated and displayed before you confirm any transaction.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-5">
+                  <AccordionTrigger>How do I transfer GCoins to another user?</AccordionTrigger>
+                  <AccordionContent>
+                    To transfer GCoins, navigate to the "Send" section, enter the recipient's wallet address and the amount you wish to send, then confirm the transaction. The recipient will receive the GCoins in their account instantly.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-6">
+                  <AccordionTrigger>How do I sell my GCoins?</AccordionTrigger>
+                  <AccordionContent>
+                    To sell your GCoins, go to the "Sell" section, enter the amount you wish to sell, select your preferred payout method, and follow the instructions to complete the transaction.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-7">
+                  <AccordionTrigger>Is my GCoin wallet secure?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes, GCoin uses advanced security measures to protect your wallet and transactions. However, we also recommend that you take additional security precautions, such as using a strong, unique password and enabling two-factor authentication.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-8">
+                  <AccordionTrigger>What should I do if I forget my password?</AccordionTrigger>
+                  <AccordionContent>
+                    If you forget your password, you can reset it by clicking on the "Forgot Password" link on the login page and following the instructions sent to your registered email address.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-9">
+                  <AccordionTrigger>How do I contact GCoin support?</AccordionTrigger>
+                  <AccordionContent>
+                    You can contact GCoin support by using the live chat feature available on our platform, or by sending an email to support@gcoin.com. Our support team is available 24/7 to assist you.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-10">
+                  <AccordionTrigger>Can I use GCoin on my mobile device?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes, GCoin is fully responsive and works on all mobile devices. You can access it through your mobile browser or download our mobile app from the App Store or Google Play.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </TabsContent>
+            
+            <TabsContent value="support" className="space-y-6">
+              <h1 className="text-3xl font-bold mb-6">Customer Support</h1>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                  <h2 className="text-xl font-semibold mb-4">Contact Us</h2>
+                  <p className="text-gray-600 mb-4">Our support team is available 24/7 to help you with any questions or concerns.</p>
                   
-                  <h3>1. Introduction</h3>
-                  <p>These terms and conditions outline the rules and regulations for the use of GCoin's website and services. By accessing this website and using our services, we assume you accept these terms and conditions in full. Do not continue to use GCoin's website and services if you do not accept all of the terms and conditions stated on this page.</p>
-                  
-                  <h3>2. Definitions</h3>
-                  <p>The following terminology applies to these Terms and Conditions, Privacy Statement and Disclaimer Notice and any or all Agreements: "Client", "You" and "Your" refers to you, the person accessing this website and accepting the Company's terms and conditions. "The Company", "Ourselves", "We", "Our" and "Us", refers to GCoin. "Party", "Parties", or "Us", refers to both the Client and ourselves, or either the Client or ourselves.</p>
-                  
-                  <h3>3. Account Registration and Security</h3>
-                  <p>To use certain features of the Service, you must register for an account. You agree to provide accurate, current, and complete information during the registration process and to update such information to keep it accurate, current, and complete. You are responsible for safeguarding your account and password. You agree not to disclose your password to any third party and to take sole responsibility for any activities or actions under your account, whether or not you have authorized such activities or actions.</p>
-                  
-                  <h3>4. GCoin Services</h3>
-                  <p>GCoin provides a digital currency platform allowing users to send and receive GCoins according to our service policies. The company reserves the right to modify, suspend, or discontinue any aspect of the service at any time.</p>
-                  
-                  <h3>5. Transaction Fees</h3>
-                  <p>GCoin charges a percentage-based fee for transactions processed through our platform. These fees may change from time to time, with notice provided to users through our platform.</p>
-                  
-                  <h3>6. Limitations of Liability</h3>
-                  <p>To the maximum extent permitted by applicable law, GCoin shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.</p>
-                  
-                  <h3>7. Changes to Terms</h3>
-                  <p>We reserve the right to modify these terms at any time. If we make changes, we will provide notice of such changes, such as by sending an email, providing notice through the Services, or updating the "Last Updated" date at the beginning of these Terms.</p>
-                  
-                  <h3>8. Contact Information</h3>
-                  <p>Questions about the Terms of Service should be sent to us at support@gcoin.com.</p>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <div className="min-w-[24px] mr-3 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gcoin-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium">Email</p>
+                        <p className="text-gray-600">support@gcoin.com</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <div className="min-w-[24px] mr-3 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gcoin-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium">Phone</p>
+                        <p className="text-gray-600">+1 (555) 123-4567</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <div className="min-w-[24px] mr-3 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gcoin-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium">Live Chat</p>
+                        <p className="text-gray-600">Available 24/7 via the chat icon on the bottom right</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="faq" className="p-6">
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+                
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+                  <h2 className="text-xl font-semibold mb-4">Help Center</h2>
+                  <p className="text-gray-600 mb-4">Explore our comprehensive resources to find answers to your questions.</p>
                   
                   <div className="space-y-4">
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">What is GCoin?</h3>
-                      <p className="text-gray-700">GCoin is a digital currency platform that allows users to send and receive digital coins quickly and securely. Our platform provides an easy-to-use interface for managing your digital assets.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">How do I create a GCoin account?</h3>
-                      <p className="text-gray-700">You can create a GCoin account by clicking on the "Register" button on our homepage. You'll need to provide an email address and create a password. We also offer Google sign-in for faster registration.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">Are there any fees for using GCoin?</h3>
-                      <p className="text-gray-700">Yes, GCoin charges a small fee for transactions. The fee is typically 3% of the transaction amount, but may vary depending on the size of the transaction. Large transactions may qualify for reduced fees.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">How do I send GCoins to someone?</h3>
-                      <p className="text-gray-700">To send GCoins, navigate to the "Send" page from your dashboard. Enter the recipient's wallet address and the amount you wish to send. Review the transaction details, including fees, and confirm to complete the transfer.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">Is there a daily limit on transactions?</h3>
-                      <p className="text-gray-700">Yes, for security purposes, there is a daily transaction limit of 1 million GCoins. If you need to transfer larger amounts, please contact our support team for assistance.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">How can I view my transaction history?</h3>
-                      <p className="text-gray-700">Your transaction history is available on the "Transactions" page. This page displays all your past transactions, including amounts, recipients, dates, and transaction statuses.</p>
-                    </div>
-                    
-                    <div className="border-b border-gray-200 pb-4">
-                      <h3 className="text-lg font-semibold mb-2">Is my GCoin wallet secure?</h3>
-                      <p className="text-gray-700">Yes, we implement industry-standard security measures to protect your wallet. This includes encryption, secure servers, and regular security audits. We also recommend enabling two-factor authentication for added security.</p>
-                    </div>
-                    
-                    <div className="pb-4">
-                      <h3 className="text-lg font-semibold mb-2">How do I contact GCoin support?</h3>
-                      <p className="text-gray-700">You can contact our support team through the live chat feature available on every page of our website. Alternatively, you can email us at support@gcoin.com or visit the Support tab in this section.</p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="support" className="p-6">
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold mb-4">Support Center</h2>
-                  
-                  <div className="bg-blue-50 rounded-lg p-4 flex items-start space-x-3 mb-6">
-                    <div className="bg-blue-100 p-2 rounded-full">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-blue-800">Live Chat Support</h3>
-                      <p className="text-sm text-blue-700 mt-1">Our support team is available to chat with you directly. Click the chat icon at the bottom right of this page.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold mb-3">Email Support</h3>
-                      <p className="text-gray-700 mb-4">Send us an email and we'll get back to you within 24 hours.</p>
-                      <a href="mailto:support@gcoin.com" className="text-gcoin-blue hover:underline font-medium">support@gcoin.com</a>
-                    </div>
-                    
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold mb-3">Help Center</h3>
-                      <p className="text-gray-700 mb-4">Browse our knowledge base for tutorials and guides.</p>
-                      <a href="#" className="text-gcoin-blue hover:underline font-medium">Visit Help Center →</a>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-200 pt-6 mt-8">
-                    <h3 className="text-lg font-semibold mb-3">Common Support Topics</h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">Account Recovery</h4>
-                        <p className="text-sm text-gray-600">Reset password and restore access</p>
+                    <div className="group">
+                      <a href="#" className="block p-3 bg-white rounded border border-gray-100 hover:border-gcoin-blue/30 hover:bg-gcoin-blue/5 transition-all">
+                        <h3 className="font-medium text-gcoin-blue group-hover:text-gcoin-blue/80">Getting Started Guide</h3>
+                        <p className="text-sm text-gray-500">Learn the basics of using GCoin</p>
                       </a>
-                      
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">Transaction Issues</h4>
-                        <p className="text-sm text-gray-600">Help with pending or failed transfers</p>
+                    </div>
+                    
+                    <div className="group">
+                      <a href="#" className="block p-3 bg-white rounded border border-gray-100 hover:border-gcoin-blue/30 hover:bg-gcoin-blue/5 transition-all">
+                        <h3 className="font-medium text-gcoin-blue group-hover:text-gcoin-blue/80">Security Best Practices</h3>
+                        <p className="text-sm text-gray-500">Tips to keep your account secure</p>
                       </a>
-                      
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">Security Concerns</h4>
-                        <p className="text-sm text-gray-600">Account protection and authentication</p>
-                      </a>
-                      
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">Wallet Management</h4>
-                        <p className="text-sm text-gray-600">Adding funds and managing balance</p>
-                      </a>
-                      
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">Fee Structure</h4>
-                        <p className="text-sm text-gray-600">Understanding transaction costs</p>
-                      </a>
-                      
-                      <a href="#" className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <h4 className="font-medium mb-1">App Features</h4>
-                        <p className="text-sm text-gray-600">How to use GCoin effectively</p>
+                    </div>
+                    
+                    <div className="group">
+                      <a href="#" className="block p-3 bg-white rounded border border-gray-100 hover:border-gcoin-blue/30 hover:bg-gcoin-blue/5 transition-all">
+                        <h3 className="font-medium text-gcoin-blue group-hover:text-gcoin-blue/80">Transaction Troubleshooting</h3>
+                        <p className="text-sm text-gray-500">Solutions for common transaction issues</p>
                       </a>
                     </div>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

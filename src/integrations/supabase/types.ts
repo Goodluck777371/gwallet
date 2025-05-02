@@ -120,27 +120,6 @@ export type Database = {
         }
         Relationships: []
       }
-      transaction_pins: {
-        Row: {
-          created_at: string
-          pin: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          pin: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          pin?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount: number
@@ -268,10 +247,6 @@ export type Database = {
               note?: string
             }
         Returns: string
-      }
-      verify_transaction_pin: {
-        Args: { input_pin: string }
-        Returns: boolean
       }
     }
     Enums: {

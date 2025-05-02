@@ -1,247 +1,319 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { cn } from '@/lib/utils';
-import { Menu, X, Bell, Settings, LogOut, User, Home, History, SendHorizontal, DollarSign } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, ChevronDown, LogOut, User, Settings, DollarSign, BarChart3 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useMobile } from "@/hooks/use-mobile";
 
 const Header = () => {
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
+  const isMobile = useMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      document.body.style.overflow = "auto";
     };
-  }, [scrolled]);
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
+  const getFallbackInitials = () => {
+    if (!user?.username) return "U";
+    return user.username.charAt(0).toUpperCase();
+  };
 
   const navLinks = [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
-    { name: 'Send', path: '/send', icon: SendHorizontal },
-    { name: 'Transactions', path: '/transactions', icon: History },
-    { name: 'Exchange', path: '/exchange', icon: DollarSign },
+    { title: "Home", path: "/", public: true },
+    { title: "Dashboard", path: "/dashboard", protected: true },
+    { title: "Send", path: "/send", protected: true },
+    { title: "Transactions", path: "/transactions", protected: true },
+    { title: "Buy/Sell", path: "/buy-sell", protected: true },
+    { title: "Exchange", path: "/exchange", protected: true },
   ];
 
-  return (
-    <header 
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 md:px-6",
-        scrolled ? "bg-white/80 backdrop-blur-md shadow-sm dark:bg-gray-900/80" : "bg-transparent"
-      )}
-    >
-      <div className="max-w-screen-xl mx-auto flex items-center justify-between h-16">
-        <Link 
-          to="/" 
-          className="flex items-center space-x-2 font-bold text-xl text-gcoin-blue"
-        >
-          <div className="h-8 w-8 rounded-full bg-gcoin-blue flex items-center justify-center">
-            <span className="text-white font-bold">G</span>
-          </div>
-          <span>Gcoin</span>
-        </Link>
+  const profileNavItems = [
+    {
+      label: "Profile",
+      icon: User,
+      onClick: () => navigate("/profile"),
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      onClick: () => navigate("/settings"),
+    },
+    {
+      label: "Buy/Sell",
+      icon: DollarSign,
+      onClick: () => navigate("/buy-sell"),
+    },
+    {
+      label: "Exchange",
+      icon: BarChart3,
+      onClick: () => navigate("/exchange"),
+    },
+  ];
 
-        {/* Desktop Navigation */}
-        {isAuthenticated && (
-          <nav className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
+  // Filter out links based on auth status
+  const filteredLinks = navLinks.filter((link) => {
+    if (isAuthenticated) {
+      return link.public || link.protected;
+    }
+    return link.public && !link.protected;
+  });
+
+  return (
+    <>
+      {/* Desktop Header */}
+      <header
+        className={cn(
+          "fixed top-0 w-full z-40 transition-all duration-200",
+          isScrolled ? "bg-white shadow-sm" : "bg-white/0"
+        )}
+      >
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-2 font-bold text-xl text-gcoin-blue">
+              <div className="h-8 w-8 rounded-full bg-gcoin-blue flex items-center justify-center">
+                <span className="text-white font-bold">G</span>
+              </div>
+              <span>Gcoin</span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex space-x-6">
+              {filteredLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
                   className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "text-sm font-medium transition-colors hover:text-gcoin-blue",
                     location.pathname === link.path
-                      ? "bg-gcoin-blue/10 text-gcoin-blue"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                      ? "text-gcoin-blue"
+                      : "text-gray-600"
                   )}
                 >
-                  <div className="flex items-center space-x-1">
-                    <Icon className="h-4 w-4" />
-                    <span>{link.name}</span>
-                  </div>
+                  {link.title}
                 </Link>
-              );
-            })}
-          </nav>
-        )}
-
-        <div className="flex items-center">
-          {isAuthenticated ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mr-2"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-              </Button>
-              
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    className="rounded-full h-8 w-8 p-0 overflow-hidden"
-                    size="icon"
-                    variant="secondary"
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    <span className="font-semibold text-sm">
-                      {user?.username.charAt(0).toUpperCase()}
-                    </span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="w-[300px] sm:w-[400px]">
-                  <div className="px-4 py-8 space-y-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-12 w-12 rounded-full bg-gcoin-blue flex items-center justify-center text-white text-lg font-semibold">
-                        {user?.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{user?.username}</h3>
-                        <p className="text-sm text-gray-500">{user?.email}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <Link to="/profile">
-                        <Button variant="ghost" className="w-full justify-start" size="sm">
-                          <User className="mr-2 h-4 w-4" />
-                          Profile
-                        </Button>
-                      </Link>
-                      <Link to="/settings">
-                        <Button variant="ghost" className="w-full justify-start" size="sm">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Settings
-                        </Button>
-                      </Link>
-                      <Button 
-                        variant="ghost" 
-                        className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
-                        size="sm"
-                        onClick={logout}
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                      </Button>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </>
-          ) : (
-            <div className="hidden md:flex items-center space-x-2">
-              <Link to="/login">
-                <Button variant="ghost">Log in</Button>
-              </Link>
-              <Link to="/register">
-                <Button>Register</Button>
-              </Link>
+              ))}
             </div>
-          )}
 
-          {/* Mobile menu */}
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Menu">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <div className="flex flex-col h-full py-6">
-                  <div className="flex items-center justify-between mb-8">
-                    <Link to="/" className="flex items-center space-x-2 font-bold text-xl">
-                      <div className="h-8 w-8 rounded-full bg-gcoin-blue flex items-center justify-center">
-                        <span className="text-white font-bold">G</span>
+            {/* Auth Buttons / User Menu */}
+            <div className="flex items-center space-x-4">
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-8 w-8 rounded-full"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={user?.avatar_url || ""}
+                          alt={user?.username || ""}
+                        />
+                        <AvatarFallback className="bg-gcoin-blue text-white">
+                          {getFallbackInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.username || "User"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email || ""}
+                        </p>
                       </div>
-                      <span>Gcoin</span>
-                    </Link>
-                  </div>
-
-                  {isAuthenticated ? (
-                    <div className="space-y-6 flex flex-col h-full">
-                      <div className="space-y-1">
-                        {navLinks.map((link) => {
-                          const Icon = link.icon;
-                          return (
-                            <Link
-                              key={link.path}
-                              to={link.path}
-                              className={cn(
-                                "flex items-center px-4 py-3 text-base rounded-md",
-                                location.pathname === link.path
-                                  ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
-                                  : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                              )}
-                            >
-                              <Icon className="h-5 w-5 mr-3" />
-                              {link.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                      
-                      <div className="space-y-1 mt-6">
-                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
-                          Account
-                        </div>
-                        <Link 
-                          to="/profile" 
-                          className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      {profileNavItems.map((item, index) => (
+                        <DropdownMenuItem
+                          key={index}
+                          className="cursor-pointer"
+                          onClick={item.onClick}
                         >
-                          <User className="h-5 w-5 mr-3" />
-                          Profile
-                        </Link>
-                        <Link 
-                          to="/settings" 
-                          className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
-                        >
-                          <Settings className="h-5 w-5 mr-3" />
-                          Settings
-                        </Link>
-                      </div>
-                      
-                      <div className="mt-auto">
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 px-4"
-                          onClick={logout}
-                        >
-                          <LogOut className="mr-3 h-5 w-5" />
-                          Logout
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Link to="/login" className="block">
-                        <Button className="w-full" variant="outline">Log in</Button>
-                      </Link>
-                      <Link to="/register" className="block">
-                        <Button className="w-full">Register</Button>
-                      </Link>
-                    </div>
-                  )}
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span>{item.label}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer text-red-600 focus:text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="hidden md:flex space-x-2">
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm">Log in</Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm">Register</Button>
+                  </Link>
                 </div>
-              </SheetContent>
-            </Sheet>
+              )}
+
+              {/* Mobile menu button */}
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 text-gray-600"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Navigation Menu */}
+      {isMobile && (
+        <div
+          className={cn(
+            "fixed inset-0 z-30 bg-white transform transition-transform duration-300 ease-in-out pt-16",
+            mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          )}
+        >
+          <div className="flex flex-col p-6 space-y-6">
+            {/* Mobile Nav Links */}
+            {filteredLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "text-lg font-medium transition-colors hover:text-gcoin-blue py-2",
+                  location.pathname === link.path
+                    ? "text-gcoin-blue"
+                    : "text-gray-600"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.title}
+              </Link>
+            ))}
+
+            {/* Mobile Auth Buttons */}
+            {!isAuthenticated ? (
+              <div className="flex flex-col space-y-3 mt-6">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full">
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full">Register</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="border-t border-gray-100 pt-6 mt-6">
+                <div className="flex items-center mb-6">
+                  <Avatar className="h-10 w-10 mr-3">
+                    <AvatarImage src={user?.avatar_url || ""} alt={user?.username || ""} />
+                    <AvatarFallback className="bg-gcoin-blue text-white">
+                      {getFallbackInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{user?.username || "User"}</p>
+                    <p className="text-sm text-gray-500">{user?.email || ""}</p>
+                  </div>
+                </div>
+
+                {/* Mobile Profile Menu */}
+                <div className="space-y-3">
+                  {profileNavItems.map((item, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      className="w-full justify-start text-gray-600 hover:text-gcoin-blue hover:bg-gray-50"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        item.onClick();
+                      }}
+                    >
+                      <item.icon className="mr-3 h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Button>
+                  ))}
+
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    <LogOut className="mr-3 h-4 w-4" />
+                    <span>Log out</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

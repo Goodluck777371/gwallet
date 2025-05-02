@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -131,7 +131,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-2 gap-4 mt-6 mb-4">
           <Link to="/send">
             <Button 
               className="bg-gcoin-blue/10 hover:bg-gcoin-blue/20 text-gcoin-blue flex items-center justify-center space-x-2 font-medium text-sm h-12 w-full"
@@ -205,6 +205,28 @@ const WalletCard = ({ className }: WalletCardProps) => {
               </div>
             </DialogContent>
           </Dialog>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Link to="/buy-sell">
+            <Button 
+              className="bg-green-500/10 hover:bg-green-500/20 text-green-600 flex items-center justify-center space-x-2 font-medium text-sm h-12 w-full"
+              variant="ghost"
+            >
+              <QrCode className="h-4 w-4 mr-1.5" />
+              <span>Buy/Sell</span>
+            </Button>
+          </Link>
+          
+          <Link to="/send?scan=true">
+            <Button 
+              className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 flex items-center justify-center space-x-2 font-medium text-sm h-12 w-full"
+              variant="ghost"
+            >
+              <Scan className="h-4 w-4 mr-1.5" />
+              <span>Scan QR</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

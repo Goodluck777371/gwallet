@@ -1,12 +1,7 @@
-
 import * as React from "react"
+import { type ToastActionElement, type ToastProps } from "@/components/ui/toast"
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
@@ -26,7 +21,7 @@ const actionTypes = {
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  count = (count + 1) % Number.MAX_VALUE
   return count.toString()
 }
 
@@ -35,11 +30,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
+      toast: Omit<ToasterToast, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
+      toast: Partial<ToasterToast> & Pick<ToasterToast, "id">
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -77,14 +72,19 @@ export const reducer = (state: State, action: Action): State => {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: [
+          ...state.toasts,
+          { ...action.toast, id: genId(), variant: action.toast.variant || "default" },
+        ].slice(0, TOAST_LIMIT),
       }
 
     case "UPDATE_TOAST":
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
+          t.id === action.toast.id
+            ? { ...t, ...action.toast }
+            : t
         ),
       }
 
@@ -138,63 +138,37 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id"> & {
-  type?: "default" | "success" | "error" | "warning" | "info" | "credit" | "debit"
-}
+type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  // Map type to variant for backward compatibility
-  let variant = props.variant;
-  if (props.type && !variant) {
-    switch (props.type) {
-      case "success":
-        variant = "default";
-        break;
-      case "error":
-        variant = "destructive";
-        break;
-      case "credit":
-        variant = "credit";
-        break;
-      case "debit":
-        variant = "debit";
-        break;
-      case "warning":
-      case "info":
-      default:
-        variant = "default";
-        break;
-    }
-  }
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+function toast(props: Toast) {
+  const { variant = "default", ...rest } = props
 
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
-      id,
       variant,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
+      ...rest,
     },
   })
-
-  return {
-    id: id,
-    dismiss,
-    update,
-  }
 }
+
+// Special transaction toasts
+toast.credit = (props: Omit<ToasterToast, "id" | "variant">) => {
+  return toast({ variant: "credit", ...props });
+};
+
+toast.debit = (props: Omit<ToasterToast, "id" | "variant">) => {
+  return toast({ variant: "debit", ...props });
+};
+
+// Standard shadcn toasts
+toast.default = (props: Omit<ToasterToast, "id" | "variant">) => {
+  return toast({ variant: "default", ...props });
+};
+
+toast.destructive = (props: Omit<ToasterToast, "id" | "variant">) => {
+  return toast({ variant: "destructive", ...props });
+};
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
@@ -212,7 +186,10 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    dismiss: (toastId?: string) => dispatch({
+      type: "DISMISS_TOAST",
+      toastId,
+    }),
   }
 }
 

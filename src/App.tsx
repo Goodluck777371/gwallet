@@ -12,7 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
+import LiveChat from "./components/LiveChat";
 
 const queryClient = new QueryClient();
 
@@ -48,16 +50,20 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
 
 // App Routes setup
 const AppRoutes = () => (
-  <Routes>
-    <Route path="/" element={<Index />} />
-    <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-    <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
-    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-    <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
-    <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
+  <>
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+      <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
+      <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+    <LiveChat />
+  </>
 );
 
 const App = () => (

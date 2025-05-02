@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, LogOut, User, Settings, DollarSign, BarChart3 } from "lucide-react";
@@ -15,13 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -151,10 +150,6 @@ const Header = () => {
                       className="relative h-8 w-8 rounded-full"
                     >
                       <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={user?.avatar_url || ""}
-                          alt={user?.username || ""}
-                        />
                         <AvatarFallback className="bg-gcoin-blue text-white">
                           {getFallbackInitials()}
                         </AvatarFallback>
@@ -268,7 +263,6 @@ const Header = () => {
               <div className="border-t border-gray-100 pt-6 mt-6">
                 <div className="flex items-center mb-6">
                   <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={user?.avatar_url || ""} alt={user?.username || ""} />
                     <AvatarFallback className="bg-gcoin-blue text-white">
                       {getFallbackInitials()}
                     </AvatarFallback>

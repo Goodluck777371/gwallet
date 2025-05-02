@@ -49,7 +49,6 @@ const Profile = () => {
           <Card className={`transition-all duration-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <CardHeader className="flex flex-col items-center pb-6">
               <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src={user?.avatar_url || ''} alt={user?.username || 'User'} />
                 <AvatarFallback className="text-xl bg-gcoin-blue text-white">
                   {getFallbackInitials()}
                 </AvatarFallback>

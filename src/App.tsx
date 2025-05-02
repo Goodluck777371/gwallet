@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
 import Buy from "./pages/Buy";
 import Sell from "./pages/Sell";
+import Stake from "./pages/Stake";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -58,6 +59,7 @@ const AppRoutes = () => (
     <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
     <Route path="/buy" element={<ProtectedRoute><Buy /></ProtectedRoute>} />
     <Route path="/sell" element={<ProtectedRoute><Sell /></ProtectedRoute>} />
+    <Route path="/stake" element={<ProtectedRoute><Stake /></ProtectedRoute>} />
     <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />

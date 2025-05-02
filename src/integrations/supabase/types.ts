@@ -170,6 +170,24 @@ export type Database = {
           },
         ]
       }
+      verify_transaction_pin: {
+        Row: {
+          created_at: string | null
+          pin: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          pin: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          pin?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -220,7 +238,14 @@ export type Database = {
         Returns: string
       }
       send_money: {
-        Args: { amount: number; recipient_wallet: string; note?: string }
+        Args:
+          | { amount: number; recipient_wallet: string; note?: string }
+          | {
+              amount: number
+              recipient_wallet: string
+              pin: string
+              note?: string
+            }
         Returns: string
       }
     }

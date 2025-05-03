@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
-import { Session, User, Provider } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 // User type (extended from Supabase User)
@@ -36,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = useToast();
 
   // Fetch user profile data
   const fetchUserProfile = async (userId: string) => {
@@ -140,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await getUserWithProfile(data.user);
         setUser(userData);
         
-        toast({
+        toast.toast({
           title: "Login successful",
           description: `Welcome back, ${userData?.username}!`,
         });
@@ -148,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast({
+      toast.toast({
         title: "Login failed",
         description: error.message || "Something went wrong",
         variant: "destructive",
@@ -176,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Auth state change will handle the rest
     } catch (error: any) {
-      toast({
+      toast.toast({
         title: "Google sign-in failed",
         description: error.message || "Something went wrong",
         variant: "destructive",
@@ -210,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = await getUserWithProfile(data.user);
         setUser(userData);
         
-        toast({
+        toast.toast({
           title: "Registration successful",
           description: data.session ? 
             `Welcome, ${username}!` : 
@@ -222,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error: any) {
-      toast({
+      toast.toast({
         title: "Registration failed",
         description: error.message || "Something went wrong",
         variant: "destructive",
@@ -238,13 +237,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       setUser(null);
-      toast({
+      toast.toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
       navigate('/');
     } catch (error: any) {
-      toast({
+      toast.toast({
         title: "Error during logout",
         description: error.message || "Something went wrong",
         variant: "destructive",

@@ -26,13 +26,12 @@ const Profile = () => {
   const getRegistrationDate = () => {
     if (!user) return 'Unknown';
     
-    // Use created_at if available in the user object
-    if (user.created_at) {
-      return formatDate(user.created_at);
-    }
+    // Check if user has a created_at property (from Supabase metadata)
+    const createdAt = user.created_at || 
+                     (user as any).created_at || 
+                     new Date().toISOString();
     
-    // Use a fallback date if created_at is not available
-    return formatDate(new Date().toISOString());
+    return formatDate(createdAt);
   };
 
   return (

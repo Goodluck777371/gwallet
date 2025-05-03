@@ -42,10 +42,10 @@ const Buy = () => {
     setShowPaymentDialog(true);
   };
 
+  // This function is passed to PaystackPayment and will be called without arguments
   const handlePaymentSuccess = () => {
     setShowPaymentDialog(false);
-    // This toast will now be shown by PaystackPayment component
-    // after successful payment
+    // Payment success handling is done by PaystackPayment component
   };
 
   return (

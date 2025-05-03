@@ -7,7 +7,7 @@ export type ToasterToast = ToastProps & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
-  variant?: "default" | "destructive" | "success" | "warning" | "debit" | "credit";
+  variant?: "default" | "destructive" | "success" | "warning" | "credit" | "debit";
 };
 
 const TOAST_LIMIT = 5;
@@ -82,15 +82,30 @@ export function useToast() {
       return toaster.addToast(props);
     },
     dismiss: (toastId: string) => toaster.removeToast(toastId),
+    error: (props: Omit<ToasterToast, "id">) => {
+      return toaster.addToast({ ...props, variant: "destructive" });
+    },
+    success: (props: Omit<ToasterToast, "id">) => {
+      return toaster.addToast({ ...props, variant: "success" });
+    },
+    warning: (props: Omit<ToasterToast, "id">) => {
+      return toaster.addToast({ ...props, variant: "warning" });
+    },
+    credit: (props: Omit<ToasterToast, "id">) => {
+      return toaster.addToast({ ...props, variant: "credit" });
+    },
+    debit: (props: Omit<ToasterToast, "id">) => {
+      return toaster.addToast({ ...props, variant: "debit" });
+    },
   };
 }
 
+// Export a singleton instance for direct import
 export const toast = {
   toast: (props: Omit<ToasterToast, "id">) => {
     return toaster.addToast(props);
   },
   dismiss: (toastId: string) => toaster.removeToast(toastId),
-  // Add these methods to fix the "toast is not callable" error
   error: (props: Omit<ToasterToast, "id">) => {
     return toaster.addToast({ ...props, variant: "destructive" });
   },

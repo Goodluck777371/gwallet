@@ -1,13 +1,16 @@
 
-import { useState, useEffect } from "react";
-import { Calendar, User } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { formatDate, formatNumber } from "@/lib/utils";
-import Header from "@/components/Header";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import Header from '@/components/Header';
 
 const Profile = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
+  const [creationDate, setCreationDate] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -17,83 +20,87 @@ const Profile = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const getUserInitials = () => {
-    if (!user?.username) return 'U';
-    return user.username.charAt(0).toUpperCase();
-  };
-
-  // Get registration date from user metadata 
-  const getRegistrationDate = () => {
-    if (!user) return 'Unknown';
+  // Fetch user creation date
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('created_at')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setCreationDate(new Date(data.created_at).toLocaleDateString());
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
     
-    // Check if user has a created_at property (from Supabase metadata)
-    const createdAt = user.created_at || 
-                     (user as any).created_at || 
-                     new Date().toISOString();
-    
-    return formatDate(createdAt);
-  };
+    fetchUserData();
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       
       <main className="pt-20 pb-16 px-4">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-md mx-auto">
           <div className="mb-8">
+            <Link to="/dashboard" className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-4">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Dashboard
+            </Link>
+            
             <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Your Profile
+              Profile
             </h1>
             <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              View and manage your account details
+              Your account information
             </p>
           </div>
           
-          <div className={`bg-white rounded-xl shadow-sm p-8 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <div className="flex items-center space-x-6 mb-6">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-semibold text-lg uppercase">
-                  {getUserInitials()}
+          <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <div className="space-y-6">
+              <div className="flex items-center justify-center mb-6">
+                <div className="relative">
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-r from-gcoin-blue to-gcoin-yellow flex items-center justify-center text-white text-2xl font-bold">
+                    {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
                 </div>
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
               </div>
+              
               <div>
-                <h2 className="text-xl font-semibold">{user?.username || 'Guest'}</h2>
-                <p className="text-gray-500">{user?.email || 'No Email'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col">
-                <div className="flex items-center text-gray-500 mb-1">
-                  <User className="h-4 w-4 text-gcoin-blue mr-2" />
-                  <span className="text-sm font-medium">Username</span>
-                </div>
-                <p className="text-gray-700">{user?.username || 'N/A'}</p>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Username</h3>
+                <p className="font-semibold">{user?.username || 'No username set'}</p>
               </div>
               
-              <div className="flex flex-col">
-                <div className="flex items-center text-gray-500 mb-1">
-                  <Calendar className="h-4 w-4 text-gcoin-blue mr-2" />
-                  <span className="text-sm font-medium">Member Since</span>
-                </div>
-                <p className="text-gray-700">{getRegistrationDate()}</p>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Email</h3>
+                <p className="font-semibold">{user?.email || 'No email set'}</p>
               </div>
               
-              <div className="flex flex-col">
-                <div className="flex items-center text-gray-500 mb-1">
-                  <User className="h-4 w-4 text-gcoin-blue mr-2" />
-                  <span className="text-sm font-medium">Current Balance</span>
-                </div>
-                <p className="text-gray-700">{formatNumber(user?.balance || 0)} GCoin</p>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Wallet Address</h3>
+                <p className="font-semibold font-mono text-sm bg-gray-50 p-2 rounded">{user?.wallet_address || 'No wallet address'}</p>
               </div>
               
-              <div className="flex flex-col">
-                <div className="flex items-center text-gray-500 mb-1">
-                  <Calendar className="h-4 w-4 text-gcoin-blue mr-2" />
-                  <span className="text-sm font-medium">Wallet Address</span>
+              {creationDate && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Member Since</h3>
+                  <p className="font-semibold">{creationDate}</p>
                 </div>
-                <p className="text-gray-700 font-mono text-sm">{user?.wallet_address || 'N/A'}</p>
+              )}
+              
+              <div className="pt-4">
+                <Link to="/settings">
+                  <button className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gcoin-blue hover:bg-gcoin-blue/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gcoin-blue">
+                    Edit Profile Settings
+                  </button>
+                </Link>
               </div>
             </div>
           </div>

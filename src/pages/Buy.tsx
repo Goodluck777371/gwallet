@@ -4,9 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
-import BuySellForm from "@/components/BuySellForm";
-import PaystackPayment from "@/components/PaystackPayment";
+import { formatNumber } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -14,17 +14,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatNumber } from "@/lib/utils";
+import PaystackPayment from "@/components/PaystackPayment";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Buy = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState({
-    amount: 0,
-    gcoinsAmount: 0
-  });
+  const [nairaAmount, setNairaAmount] = useState("");
+  const [gcoinAmount, setGcoinAmount] = useState(0);
+  const [exchangeRate, setExchangeRate] = useState(850);
+  const [fee, setFee] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,19 +44,63 @@ const Buy = () => {
 
     return () => clearTimeout(timer);
   }, []);
+  
+  useEffect(() => {
+    // Fetch exchange rate
+    const getExchangeRate = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('exchange_rates')
+          .select('rate')
+          .eq('currency', 'NGN')
+          .single();
+          
+        if (data) {
+          setExchangeRate(data.rate);
+        }
+      } catch (error) {
+        console.error("Error fetching exchange rate:", error);
+      }
+    };
+    
+    getExchangeRate();
+  }, []);
 
-  const handleSuccess = (amount: number, gcoinsAmount: number) => {
-    // Instead of showing toast right away, open payment dialog
-    setPaymentDetails({
-      amount,
-      gcoinsAmount
-    });
+  // Calculate GCoin amount whenever Naira amount changes
+  useEffect(() => {
+    if (nairaAmount && !isNaN(Number(nairaAmount))) {
+      const naira = parseFloat(nairaAmount);
+      // Calculate GCoin based on exchange rate
+      const rawGcoin = naira / exchangeRate;
+      // Calculate fee (1%)
+      const feeAmount = rawGcoin * 0.01;
+      setFee(feeAmount);
+      // Final GCoin amount after fee
+      setGcoinAmount(rawGcoin - feeAmount);
+    } else {
+      setGcoinAmount(0);
+      setFee(0);
+    }
+  }, [nairaAmount, exchangeRate]);
+
+  const handleBuyClick = () => {
+    // Validate input
+    if (!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0) {
+      toast.error({
+        title: "Invalid amount",
+        description: "Please enter a valid amount to proceed."
+      });
+      return;
+    }
+    
+    // Open payment dialog
     setShowPaymentDialog(true);
   };
 
   // This function is called after payment completion
   const handlePaymentSuccess = () => {
     setShowPaymentDialog(false);
+    setNairaAmount("");
     // Payment success handling is done by PaystackPayment component
   };
 
@@ -70,7 +125,60 @@ const Buy = () => {
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <BuySellForm mode="buy" onSuccess={handleSuccess} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Buy with Nigerian Naira</CardTitle>
+                <CardDescription>
+                  Purchase GCoins directly with NGN using Paystack
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount (NGN)</Label>
+                  <Input
+                    id="amount"
+                    placeholder="Enter amount in Naira"
+                    type="number"
+                    value={nairaAmount}
+                    onChange={(e) => setNairaAmount(e.target.value)}
+                  />
+                </div>
+                
+                {gcoinAmount > 0 && (
+                  <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Exchange Rate:</span>
+                      <span className="font-medium">
+                        1 GCoin = ₦{formatNumber(exchangeRate)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Fee (1%):</span>
+                      <span className="font-medium">
+                        {formatNumber(fee)} GCoin (₦{formatNumber(fee * exchangeRate)})
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between pt-2 border-t border-muted">
+                      <span className="font-medium">You will receive:</span>
+                      <span className="font-bold">
+                        {formatNumber(gcoinAmount)} GCoin
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={handleBuyClick}
+                  disabled={!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0}
+                  className="w-full"
+                >
+                  Buy Now
+                </Button>
+              </CardFooter>
+            </Card>
           </div>
         </div>
       </main>
@@ -81,15 +189,15 @@ const Buy = () => {
           <DialogHeader>
             <DialogTitle>Complete Your Purchase</DialogTitle>
             <DialogDescription>
-              You're buying {formatNumber(paymentDetails.gcoinsAmount)} GCoins for ₦{formatNumber(paymentDetails.amount)}
+              You're buying {formatNumber(gcoinAmount)} GCoins for ₦{formatNumber(parseFloat(nairaAmount))}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
             <PaystackPayment 
-              amount={paymentDetails.amount} 
+              amount={parseFloat(nairaAmount)} 
               email={user?.email || ''}
-              gcoinsAmount={paymentDetails.gcoinsAmount}
+              gcoinsAmount={gcoinAmount}
               onSuccess={handlePaymentSuccess}
               onClose={() => setShowPaymentDialog(false)}
             />

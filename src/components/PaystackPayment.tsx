@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { formatNumber } from '@/lib/utils';
 
 interface PaystackPaymentProps {
   amount: number; // Amount in Naira
@@ -13,9 +15,8 @@ interface PaystackPaymentProps {
   onClose: () => void;
 }
 
-// This key would normally come from environment variables
-// For now we'll use a placeholder - you'll need to replace with your actual public key
-const PAYSTACK_PUBLIC_KEY = "pk_test_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+// Using the provided live key
+const PAYSTACK_PUBLIC_KEY = "pk_live_1795bdb32ad23326bb1946b951cdd6cde892d4a9";
 
 declare global {
   interface Window {
@@ -31,7 +32,42 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   onClose
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // Load Paystack script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.async = true;
+    script.onload = () => setScriptLoaded(true);
+    document.body.appendChild(script);
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const updateUserBalance = async (reference: string) => {
+    try {
+      // Call a Supabase function to update the user's balance
+      const { data, error } = await supabase.rpc('buy_gcoin', {
+        currency_code: 'NGN',
+        currency_amount: amount
+      });
+      
+      if (error) throw error;
+      
+      // Refresh the user data to get updated balance
+      await supabase.auth.refreshSession();
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      return false;
+    }
+  };
 
   const initializePayment = () => {
     setIsLoading(true);
@@ -71,26 +107,33 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
             }
           ]
         },
-        callback: function(response: any) {
+        callback: async function(response: any) {
           // This happens after the payment is completed successfully
           const transactionReference = response.reference;
           
-          // In a real implementation, you would verify this payment on your server
-          console.log("Payment complete! Reference:", transactionReference);
+          // Update user balance
+          const balanceUpdated = await updateUserBalance(transactionReference);
           
-          // Show success toast
-          toast.credit({
-            title: "Payment Successful",
-            description: `You have successfully purchased ${gcoinsAmount} GCoins.`
-          });
-          
-          // Call the onSuccess callback
-          onSuccess();
+          if (balanceUpdated) {
+            // Show success toast
+            toast.credit({
+              title: "Payment Successful",
+              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`
+            });
+            
+            // Call the onSuccess callback
+            onSuccess();
+          } else {
+            toast.error({
+              title: "Transaction Error",
+              description: "Payment was successful but there was an error updating your balance. Please contact support."
+            });
+          }
           setIsLoading(false);
         },
         onClose: function() {
           // User closed the payment window
-          toast({
+          toast.toast({
             title: "Payment Cancelled",
             description: "You have cancelled the payment."
           });
@@ -114,13 +157,18 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   return (
     <Button 
       onClick={initializePayment} 
-      disabled={isLoading} 
+      disabled={isLoading || !scriptLoaded} 
       className="w-full"
     >
       {isLoading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Processing...
+        </>
+      ) : !scriptLoaded ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading payment...
         </>
       ) : (
         "Pay with Paystack"

@@ -1,6 +1,6 @@
 
 import { Fragment } from "react";
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, Info, User } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock, AlertTriangle, Info, User, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +12,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatNumber } from "@/lib/utils";
 
 export interface Transaction {
   id: string;
-  type: "send" | "receive";
+  type: "send" | "receive" | "buy" | "sell" | "stake" | "unstake";
   amount: number;
   recipient: string;
   sender: string;
@@ -40,10 +41,10 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
     if (diffInMinutes < 1) {
       return "Just now";
     } else if (diffInMinutes < 60) {
-      return `${diffInMinutes} ${diffInMinutes === 1 ? "minute" : "minutes"} ago`;
+      return `${diffInMinutes} minutes ago`;
     } else if (diffInMinutes < 1440) {
       const hours = Math.floor(diffInMinutes / 60);
-      return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+      return `${hours} hours ago`;
     } else {
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
@@ -70,17 +71,49 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
   const copyTransactionId = async () => {
     try {
       await navigator.clipboard.writeText(transaction.id);
-      toast({
+      toast.success({
         title: "Copied!",
         description: "Transaction ID copied to clipboard.",
       });
     } catch (err) {
-      toast({
+      toast.error({
         title: "Failed to copy",
         description: "Please try again or copy manually.",
-        variant: "destructive",
       });
     }
+  };
+
+  const generateTransactionReceipt = () => {
+    // Create receipt content
+    const receiptContent = `
+      GCoin Transaction Receipt
+      ------------------------
+      Transaction ID: ${transaction.id}
+      Type: ${transaction.type.toUpperCase()}
+      Amount: ${formatNumber(transaction.amount)} GCoin
+      ${transaction.fee ? `Fee: ${formatNumber(transaction.fee)} GCoin` : ''}
+      Date: ${new Date(transaction.timestamp).toLocaleString()}
+      Status: ${transaction.status.toUpperCase()}
+      ${transaction.type === 'send' ? `Recipient: ${transaction.recipient}` : ''}
+      ${transaction.type === 'receive' ? `Sender: ${transaction.sender}` : ''}
+      ${transaction.description ? `Note: ${transaction.description}` : ''}
+    `;
+    
+    // Create a blob and download the receipt
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gcoin_receipt_${transaction.id}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success({
+      title: "Receipt Downloaded",
+      description: "Transaction receipt has been saved to your device.",
+    });
   };
 
   return (
@@ -88,11 +121,9 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
       <div className="flex items-center">
         <div className={cn(
           "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3",
-          transaction.type === "receive" 
-            ? "bg-green-100" 
-            : "bg-red-100"
+          transaction.type === "receive" || transaction.type === "buy" ? "bg-green-100" : "bg-red-100"
         )}>
-          {transaction.type === "receive" ? (
+          {transaction.type === "receive" || transaction.type === "buy" ? (
             <ArrowDownLeft className="h-5 w-5 text-green-600" />
           ) : (
             <ArrowUpRight className="h-5 w-5 text-red-600" />
@@ -103,25 +134,28 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
           <div className="flex items-start justify-between">
             <div>
               <h4 className="text-sm font-medium">
-                {transaction.type === "receive" ? "Received GCoins" : "Sent GCoins"}
+                {transaction.type === "receive" ? "Received GCoins" : 
+                 transaction.type === "send" ? "Sent GCoins" : 
+                 transaction.type === "buy" ? "Bought GCoins" : 
+                 transaction.type === "sell" ? "Sold GCoins" : 
+                 transaction.type === "stake" ? "Staked GCoins" : 
+                 "Unstaked GCoins"}
               </h4>
               <p className="text-xs text-gray-500 flex items-center">
                 {transaction.type === "receive" ? 
                   <Fragment>From: <span className="font-medium ml-1">{transaction.sender}</span></Fragment> : 
-                  <Fragment>To: <span className="font-medium ml-1">{transaction.recipient}</span></Fragment>
+                  transaction.type === "send" ?
+                  <Fragment>To: <span className="font-medium ml-1">{transaction.recipient}</span></Fragment> :
+                  <Fragment>{transaction.description?.substring(0, 30)}{transaction.description?.length > 30 ? '...' : ''}</Fragment>
                 }
-                <span className="inline-flex items-center ml-2">
-                  <User className="h-3 w-3 mr-1 text-gray-400" />
-                  {transaction.type === "receive" ? transaction.sender : transaction.recipient}
-                </span>
               </p>
             </div>
             <div className="text-right">
               <p className={cn(
                 "text-sm font-semibold",
-                transaction.type === "receive" ? "text-green-600" : "text-red-600"
+                (transaction.type === "receive" || transaction.type === "buy" || transaction.type === "unstake") ? "text-green-600" : "text-red-600"
               )}>
-                {transaction.type === "receive" ? "+" : "-"}{transaction.amount.toFixed(2)} GCoin
+                {(transaction.type === "receive" || transaction.type === "buy" || transaction.type === "unstake") ? "+" : "-"}{formatNumber(transaction.amount)} GCoin
               </p>
               <p className="text-xs text-gray-500">
                 {formatTimestamp(transaction.timestamp)}
@@ -135,11 +169,6 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
                 {getStatusIcon()}
                 <span className="ml-1 capitalize">{transaction.status}</span>
               </span>
-              {transaction.description && (
-                <span className="ml-2 text-gray-500 truncate max-w-[150px] sm:max-w-xs">
-                  • {transaction.description}
-                </span>
-              )}
             </div>
             
             <Dialog>
@@ -157,17 +186,37 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
                 <DialogHeader>
                   <DialogTitle className={cn(
                     "flex items-center",
-                    transaction.type === "receive" ? "text-green-600" : "text-red-600"
+                    (transaction.type === "receive" || transaction.type === "buy" || transaction.type === "unstake") ? "text-green-600" : "text-red-600"
                   )}>
                     {transaction.type === "receive" ? (
                       <>
                         <ArrowDownLeft className="h-5 w-5 mr-2" />
                         Received GCoins
                       </>
-                    ) : (
+                    ) : transaction.type === "send" ? (
                       <>
                         <ArrowUpRight className="h-5 w-5 mr-2" />
                         Sent GCoins
+                      </>
+                    ) : transaction.type === "buy" ? (
+                      <>
+                        <ArrowDownLeft className="h-5 w-5 mr-2" />
+                        Bought GCoins
+                      </>
+                    ) : transaction.type === "sell" ? (
+                      <>
+                        <ArrowUpRight className="h-5 w-5 mr-2" />
+                        Sold GCoins
+                      </>
+                    ) : transaction.type === "stake" ? (
+                      <>
+                        <ArrowUpRight className="h-5 w-5 mr-2" />
+                        Staked GCoins
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownLeft className="h-5 w-5 mr-2" />
+                        Unstaked GCoins
                       </>
                     )}
                   </DialogTitle>
@@ -189,29 +238,31 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
                     <span className="text-sm text-gray-500">Amount:</span>
                     <span className={cn(
                       "font-medium",
-                      transaction.type === "receive" ? "text-green-600" : "text-red-600"
+                      (transaction.type === "receive" || transaction.type === "buy" || transaction.type === "unstake") ? "text-green-600" : "text-red-600"
                     )}>
-                      {transaction.type === "receive" ? "+" : "-"}{transaction.amount.toFixed(2)} GCoin
+                      {(transaction.type === "receive" || transaction.type === "buy" || transaction.type === "unstake") ? "+" : "-"}{formatNumber(transaction.amount)} GCoin
                     </span>
                   </div>
                   
-                  {transaction.fee && (
+                  {transaction.fee !== undefined && transaction.fee > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Fee:</span>
-                      <span className="font-medium">{transaction.fee.toFixed(2)} GCoin</span>
+                      <span className="font-medium">{formatNumber(transaction.fee)} GCoin</span>
                     </div>
                   )}
                   
-                  <div className="pt-2 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">
-                        {transaction.type === "receive" ? "From:" : "To:"}
-                      </span>
-                      <span className="font-medium">
-                        {transaction.type === "receive" ? transaction.sender : transaction.recipient}
-                      </span>
+                  {(transaction.type === "send" || transaction.type === "receive") && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">
+                          {transaction.type === "receive" ? "From:" : "To:"}
+                        </span>
+                        <span className="font-medium">
+                          {transaction.type === "receive" ? transaction.sender : transaction.recipient}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {transaction.description && (
                     <div className="pt-2 border-t border-gray-200">
@@ -259,6 +310,18 @@ const TransactionItem = ({ transaction, className }: TransactionItemProps) => {
                         }).format(transaction.timestamp)}
                       </span>
                     </div>
+                  </div>
+                  
+                  <div className="pt-4 flex justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={generateTransactionReceipt}
+                      className="flex items-center"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Receipt
+                    </Button>
                   </div>
                 </div>
               </DialogContent>

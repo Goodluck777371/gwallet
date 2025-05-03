@@ -1,24 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import { SendMoneyForm } from "@/components/SendMoneyForm";
+import BuySellForm from "@/components/BuySellForm";
 
-// Parse query params
-function useQuery() {
-  return new URLSearchParams(useLocation().search);
-}
-
-const Send = () => {
-  const { isAuthenticated, user } = useAuth();
+const Sell = () => {
   const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
-  const query = useQuery();
-  const addressFromQR = query.get('address');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -28,21 +19,11 @@ const Send = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    // Show toast if we got an address from QR code
-    if (addressFromQR) {
-      toast({
-        title: "Address Scanned",
-        description: `Recipient address: ${addressFromQR.substring(0, 8)}...${addressFromQR.substring(addressFromQR.length - 8)}`,
-      });
-    }
-  }, [addressFromQR, toast]);
-
-  const handleTransactionSuccess = () => {
+  const handleSuccess = () => {
     toast({
-      title: "Transfer Successful! 🎉",
-      description: "Your GCoins have been sent successfully.",
-      variant: "debit", // Using our new variant for debit transactions
+      title: "Sale Successful! 🎉",
+      description: "Your GCoins have been sold.",
+      variant: "debit",
     });
   };
 
@@ -59,18 +40,15 @@ const Send = () => {
             </Link>
             
             <h1 className={`text-3xl font-bold mb-2 transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Send GCoins
+              Sell GCoins
             </h1>
             <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Transfer GCoins to another wallet
+              Convert your GCoins to your preferred currency
             </p>
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <SendMoneyForm 
-              onSuccess={handleTransactionSuccess} 
-              initialRecipient={addressFromQR || ''}
-            />
+            <BuySellForm mode="sell" onSuccess={handleSuccess} />
           </div>
         </div>
       </main>
@@ -78,4 +56,4 @@ const Send = () => {
   );
 };
 
-export default Send;
+export default Sell;

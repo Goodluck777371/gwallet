@@ -1,37 +1,48 @@
 
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SplashScreenProps {
   onFinished: () => void;
 }
 
-const SplashScreen = ({ onFinished }: SplashScreenProps) => {
-  const [animationComplete, setAnimationComplete] = useState(false);
-
+const SplashScreen: React.FC<SplashScreenProps> = ({ onFinished }) => {
+  const [fadeOut, setFadeOut] = useState(false);
+  const { user } = useAuth();
+  
   useEffect(() => {
+    // Wait for a moment, then start fade out animation
     const timer = setTimeout(() => {
-      setAnimationComplete(true);
-      setTimeout(onFinished, 500); // Add delay before hiding splash screen
+      setFadeOut(true);
     }, 2000);
-
-    return () => clearTimeout(timer);
+    
+    // After fade out animation is complete, call onFinished
+    const completeTimer = setTimeout(() => {
+      onFinished();
+    }, 2500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(completeTimer);
+    };
   }, [onFinished]);
-
+  
   return (
-    <div
-      className={cn(
-        "fixed inset-0 z-50 bg-white flex flex-col items-center justify-center transition-opacity duration-500",
-        animationComplete ? "opacity-0" : "opacity-100"
-      )}
-    >
-      <div className="flex flex-col items-center">
-        <div className="h-20 w-20 rounded-full bg-gcoin-blue flex items-center justify-center mb-6">
-          <span className="text-white font-bold text-4xl">G</span>
+    <div className={`fixed inset-0 z-50 bg-white flex flex-col items-center justify-center transition-opacity duration-500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="flex flex-col items-center space-y-6">
+        <div className="h-20 w-20 rounded-full bg-gcoin-blue/10 flex items-center justify-center p-4">
+          <div className="h-12 w-12 rounded-full bg-gcoin-blue flex items-center justify-center">
+            <span className="text-white font-bold text-xl">G</span>
+          </div>
         </div>
-        <h1 className="text-3xl font-bold mb-6 text-gcoin-blue">Welcome Back</h1>
+        
+        <h1 className="text-2xl font-bold text-gray-800">
+          Welcome Back
+          {user?.username && <span className="ml-2">{user.username}</span>}
+        </h1>
+        
         <div className="relative">
-          <div className="h-8 w-8 rounded-full border-4 border-gcoin-blue/20 border-t-gcoin-blue animate-spin"></div>
+          <div className="h-8 w-8 rounded-full border-2 border-gcoin-blue/10 border-t-gcoin-blue animate-spin"></div>
         </div>
       </div>
     </div>

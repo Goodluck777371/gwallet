@@ -1,5 +1,10 @@
+
 import * as React from "react"
-import { type ToastActionElement, type ToastProps } from "@/components/ui/toast"
+
+import type {
+  ToastActionElement,
+  ToastProps,
+} from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
@@ -59,8 +64,8 @@ const addToRemoveQueue = (toastId: string) => {
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
     dispatch({
-      type: "REMOVE_TOAST",
-      toastId: toastId,
+      type: actionTypes.REMOVE_TOAST,
+      toastId,
     })
   }, TOAST_REMOVE_DELAY)
 
@@ -69,30 +74,26 @@ const addToRemoveQueue = (toastId: string) => {
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case "ADD_TOAST":
+    case actionTypes.ADD_TOAST:
       return {
         ...state,
         toasts: [
-          ...state.toasts,
-          { ...action.toast, id: genId(), variant: action.toast.variant || "default" },
-        ].slice(0, TOAST_LIMIT),
+          { id: genId(), ...action.toast },
+          ...state.toasts.slice(0, TOAST_LIMIT - 1),
+        ],
       }
 
-    case "UPDATE_TOAST":
+    case actionTypes.UPDATE_TOAST:
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id
-            ? { ...t, ...action.toast }
-            : t
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
         ),
       }
 
-    case "DISMISS_TOAST": {
+    case actionTypes.DISMISS_TOAST: {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -113,7 +114,8 @@ export const reducer = (state: State, action: Action): State => {
         ),
       }
     }
-    case "REMOVE_TOAST":
+
+    case actionTypes.REMOVE_TOAST:
       if (action.toastId === undefined) {
         return {
           ...state,
@@ -140,37 +142,51 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast(props: Toast) {
-  const { variant = "default", ...rest } = props
+export function toast(props: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: actionTypes.UPDATE_TOAST,
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   dispatch({
-    type: "ADD_TOAST",
+    type: actionTypes.ADD_TOAST,
     toast: {
-      variant,
-      ...rest,
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) {
+          dismiss()
+        }
+      },
     },
   })
+
+  return {
+    id,
+    dismiss,
+    update,
+  }
 }
 
-// Special transaction toasts
+// Special toast methods for different notifications
 toast.credit = (props: Omit<ToasterToast, "id" | "variant">) => {
-  return toast({ variant: "credit", ...props });
+  return toast({ ...props, variant: "credit" });
 };
 
 toast.debit = (props: Omit<ToasterToast, "id" | "variant">) => {
-  return toast({ variant: "debit", ...props });
+  return toast({ ...props, variant: "debit" });
 };
 
-// Standard shadcn toasts
-toast.default = (props: Omit<ToasterToast, "id" | "variant">) => {
-  return toast({ variant: "default", ...props });
+toast.error = (props: Omit<ToasterToast, "id" | "variant">) => {
+  return toast({ ...props, variant: "destructive" });
 };
 
-toast.destructive = (props: Omit<ToasterToast, "id" | "variant">) => {
-  return toast({ variant: "destructive", ...props });
-};
-
-function useToast() {
+export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
@@ -181,16 +197,11 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({
-      type: "DISMISS_TOAST",
-      toastId,
-    }),
+    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }
 }
-
-export { useToast, toast }

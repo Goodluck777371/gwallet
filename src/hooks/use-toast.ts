@@ -174,15 +174,15 @@ export function toast(props: Toast) {
 }
 
 // Special toast methods for different notifications
-toast.credit = (props: Omit<ToasterToast, "id" | "variant">) => {
+toast.credit = (props: Omit<Toast, "variant">) => {
   return toast({ ...props, variant: "credit" });
 };
 
-toast.debit = (props: Omit<ToasterToast, "id" | "variant">) => {
+toast.debit = (props: Omit<Toast, "variant">) => {
   return toast({ ...props, variant: "debit" });
 };
 
-toast.error = (props: Omit<ToasterToast, "id" | "variant">) => {
+toast.error = (props: Omit<Toast, "variant">) => {
   return toast({ ...props, variant: "destructive" });
 };
 

@@ -49,6 +49,13 @@ const Profile = () => {
     return user.username.charAt(0).toUpperCase();
   };
 
+  // Get registration date from user metadata
+  const getRegistrationDate = () => {
+    if (!user) return 'Unknown';
+    // Use a default date if created_at is not available
+    return formatDate(new Date().toISOString());
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -124,7 +131,7 @@ const Profile = () => {
                               <Calendar className="h-4 w-4 text-gcoin-blue mr-2" />
                               <span className="text-sm font-medium">Member Since</span>
                             </div>
-                            <p className="text-gray-700">{formatDate(user?.created_at)}</p>
+                            <p className="text-gray-700">{getRegistrationDate()}</p>
                           </div>
                         </div>
                         

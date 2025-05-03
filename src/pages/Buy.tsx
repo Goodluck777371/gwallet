@@ -44,7 +44,6 @@ const Buy = () => {
 
   const handlePaymentSuccess = () => {
     setShowPaymentDialog(false);
-    
     // This toast will now be shown by PaystackPayment component
     // after successful payment
   };
@@ -90,7 +89,7 @@ const Buy = () => {
               amount={paymentDetails.amount} 
               email={user?.email || ''}
               gcoinsAmount={paymentDetails.gcoinsAmount}
-              onSuccess={handlePaymentSuccess}
+              onSuccess={() => handlePaymentSuccess()}
               onClose={() => setShowPaymentDialog(false)}
             />
           </div>

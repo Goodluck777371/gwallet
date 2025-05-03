@@ -40,7 +40,7 @@ const formSchema = z.object({
   recipient: z
     .string()
     .min(1, "Recipient address is required")
-    .regex(/^gCoin[a-zA-Z0-9]{12}$/, "Invalid wallet address format"),
+    .regex(/^gCoin[a-zA-Z0-9]{12,}$/, "Invalid wallet address format"),
   amount: z
     .string()
     .min(1, "Amount is required")
@@ -117,7 +117,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
         return;
       }
 
-      // Send money without PIN (using updated RPC function)
+      // Send money using RPC function
       const { data, error } = await supabase.rpc('send_money', {
         amount: amountNum,
         recipient_wallet: values.recipient,
@@ -125,7 +125,8 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
       });
 
       if (error) {
-        throw error;
+        console.error("Transaction error:", error);
+        throw new Error(error.message || "Transaction failed");
       }
 
       // Success

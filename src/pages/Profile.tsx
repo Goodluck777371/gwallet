@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +26,7 @@ const Profile = () => {
   const getRegistrationDate = () => {
     if (!user) return 'Unknown';
     
+    // Use created_at if available in the user object
     if (user.created_at) {
       return formatDate(user.created_at);
     }

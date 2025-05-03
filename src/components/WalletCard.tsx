@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode, DollarSign } from "lucide-react";
@@ -30,6 +29,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
   const walletAddress = user?.wallet_address || '';
   const balance = user?.balance || 0;
 
+  // Format balance with commas
   const formattedBalance = formatNumber(balance);
 
   const shortenedAddress = walletAddress ? 
@@ -42,14 +42,14 @@ const WalletCard = ({ className }: WalletCardProps) => {
     try {
       await navigator.clipboard.writeText(walletAddress);
       setCopied(true);
-      toast({
+      toast.toast({
         title: "Wallet address copied!",
         description: "The wallet address has been copied to your clipboard.",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
-      toast({
+      toast.toast({
         title: "Failed to copy",
         description: "Please try again or copy manually.",
         variant: "destructive",
@@ -57,8 +57,9 @@ const WalletCard = ({ className }: WalletCardProps) => {
     }
   };
 
-  // Calculate Naira equivalent (850 Naira per GCoin)
-  const nairaEquivalent = balance * 850;
+  // Calculate Naira equivalent with fixed 850 Naira per GCoin
+  const exchangeRate = 850;
+  const nairaEquivalent = balance * exchangeRate;
   const formattedNairaEquivalent = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN'

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -10,13 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import WalletCard from "@/components/WalletCard";
 import TransactionItem, { Transaction } from "@/components/TransactionItem";
+import { formatNumber } from "@/lib/utils";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
-  const [exchangeRate, setExchangeRate] = useState(850); // Default value
+  const [exchangeRate, setExchangeRate] = useState(850); // Fixed exchange rate at 850
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -24,28 +24,6 @@ const Dashboard = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, []);
-
-  // Fetch exchange rate
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('exchange_rates')
-          .select('rate')
-          .eq('currency', 'NGN')
-          .single();
-        
-        if (error) throw error;
-        if (data) {
-          setExchangeRate(data.rate);
-        }
-      } catch (error) {
-        console.error('Error fetching exchange rate:', error);
-      }
-    };
-
-    fetchExchangeRate();
   }, []);
 
   // Fetch transactions when user is available
@@ -115,6 +93,9 @@ const Dashboard = () => {
     currency: 'NGN'
   }).format(nairaValue);
 
+  // Format the exchange rate with commas
+  const formattedExchangeRate = formatNumber(exchangeRate, 0);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -154,7 +135,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Exchange Rate</p>
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-semibold">₦{exchangeRate}</span>
+                      <span className="text-2xl font-semibold">₦{formattedExchangeRate}</span>
                       <span className="ml-2 text-xs text-muted-foreground">per GCoin</span>
                     </div>
                   </div>

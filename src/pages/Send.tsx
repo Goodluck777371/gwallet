@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import { SendMoneyForm } from "@/components/SendMoneyForm";
 
@@ -14,7 +14,6 @@ function useQuery() {
 
 const Send = () => {
   const { isAuthenticated, user } = useAuth();
-  const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
   const query = useQuery();
   const addressFromQR = query.get('address');
@@ -30,15 +29,15 @@ const Send = () => {
   useEffect(() => {
     // Show toast if we got an address from QR code
     if (addressFromQR) {
-      toast({
+      toast.toast({
         title: "Address Scanned",
         description: `Recipient address: ${addressFromQR.substring(0, 8)}...${addressFromQR.substring(addressFromQR.length - 8)}`,
       });
     }
-  }, [addressFromQR, toast]);
+  }, [addressFromQR]);
 
   const handleTransactionSuccess = () => {
-    toast({
+    toast.toast({
       title: "Transfer Successful! 🎉",
       description: "Your GCoins have been sent successfully.",
       variant: "debit", // Using our new variant for debit transactions

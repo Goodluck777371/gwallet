@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 export type ToasterToast = ToastProps & {
@@ -68,11 +68,13 @@ export const toaster = {
 export function useToast() {
   const [state, setState] = useState<ToasterToastState>({ toasts: [] });
 
-  useState(() => {
-    return toaster.subscribe((state) => {
+  useEffect(() => {
+    const unsubscribe = toaster.subscribe((state) => {
       setState(state);
     });
-  });
+    
+    return unsubscribe;
+  }, []);
   
   return {
     toasts: state.toasts,
@@ -88,4 +90,20 @@ export const toast = {
     return toaster.addToast(props);
   },
   dismiss: (toastId: string) => toaster.removeToast(toastId),
+  // Add these methods to fix the "toast is not callable" error
+  error: (props: Omit<ToasterToast, "id">) => {
+    return toaster.addToast({ ...props, variant: "destructive" });
+  },
+  success: (props: Omit<ToasterToast, "id">) => {
+    return toaster.addToast({ ...props, variant: "success" });
+  },
+  warning: (props: Omit<ToasterToast, "id">) => {
+    return toaster.addToast({ ...props, variant: "warning" });
+  },
+  credit: (props: Omit<ToasterToast, "id">) => {
+    return toaster.addToast({ ...props, variant: "credit" });
+  },
+  debit: (props: Omit<ToasterToast, "id">) => {
+    return toaster.addToast({ ...props, variant: "debit" });
+  },
 };

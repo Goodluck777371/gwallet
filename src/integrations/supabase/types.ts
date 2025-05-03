@@ -120,6 +120,42 @@ export type Database = {
         }
         Relationships: []
       }
+      staking_positions: {
+        Row: {
+          amount: number
+          created_at: string
+          duration_days: number
+          end_date: string
+          estimated_reward: number
+          id: string
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration_days: number
+          end_date?: string
+          estimated_reward: number
+          id?: string
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration_days?: number
+          end_date?: string
+          estimated_reward?: number
+          id?: string
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -233,6 +269,10 @@ export type Database = {
           email: string
         }[]
       }
+      process_completed_stakes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       sell_gcoin: {
         Args: { gcoin_amount: number; currency_code: string }
         Returns: string
@@ -246,6 +286,14 @@ export type Database = {
               pin: string
               note?: string
             }
+        Returns: string
+      }
+      stake_gcoin: {
+        Args: { amount: number; duration_days: number }
+        Returns: string
+      }
+      unstake_gcoin: {
+        Args: { staking_id: string }
         Returns: string
       }
     }

@@ -89,7 +89,7 @@ const Buy = () => {
               amount={paymentDetails.amount} 
               email={user?.email || ''}
               gcoinsAmount={paymentDetails.gcoinsAmount}
-              onSuccess={() => handlePaymentSuccess()}
+              onSuccess={handlePaymentSuccess}
               onClose={() => setShowPaymentDialog(false)}
             />
           </div>

@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatNumber } from "@/lib/utils";
 
 const Buy = () => {
   const { toast } = useToast();
@@ -42,7 +43,7 @@ const Buy = () => {
     setShowPaymentDialog(true);
   };
 
-  // This function is passed to PaystackPayment and will be called without arguments
+  // This function is called after payment completion
   const handlePaymentSuccess = () => {
     setShowPaymentDialog(false);
     // Payment success handling is done by PaystackPayment component
@@ -80,7 +81,7 @@ const Buy = () => {
           <DialogHeader>
             <DialogTitle>Complete Your Purchase</DialogTitle>
             <DialogDescription>
-              You're buying {paymentDetails.gcoinsAmount} GCoins for ₦{paymentDetails.amount.toLocaleString()}
+              You're buying {formatNumber(paymentDetails.gcoinsAmount)} GCoins for ₦{formatNumber(paymentDetails.amount)}
             </DialogDescription>
           </DialogHeader>
           

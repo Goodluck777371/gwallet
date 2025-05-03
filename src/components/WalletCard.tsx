@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { formatNumber } from "@/lib/utils";
 import QrCodeScanner from "./QrCodeScanner";
 import {
   Dialog,
@@ -29,10 +30,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
   const walletAddress = user?.wallet_address || '';
   const balance = user?.balance || 0;
 
-  const formattedBalance = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(balance);
+  const formattedBalance = formatNumber(balance);
 
   const shortenedAddress = walletAddress ? 
     `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}` : 
@@ -59,7 +57,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
     }
   };
 
-  // Calculate Naira equivalent (assuming 850 Naira per GCoin)
+  // Calculate Naira equivalent (850 Naira per GCoin)
   const nairaEquivalent = balance * 850;
   const formattedNairaEquivalent = new Intl.NumberFormat('en-NG', {
     style: 'currency',
@@ -103,7 +101,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
                 <span className="ml-2 text-lg font-medium text-gcoin-blue">GCoin</span>
               </div>
               <div className="mt-1 text-sm text-gray-500">
-                ≈ {formattedNairaEquivalent} NGN
+                ≈ {formattedNairaEquivalent}
               </div>
             </div>
           ) : (

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatNumber } from "@/lib/utils";
 import Header from "@/components/Header";
 
 const Profile = () => {
@@ -78,6 +78,22 @@ const Profile = () => {
                   <span className="text-sm font-medium">Member Since</span>
                 </div>
                 <p className="text-gray-700">{getRegistrationDate()}</p>
+              </div>
+              
+              <div className="flex flex-col">
+                <div className="flex items-center text-gray-500 mb-1">
+                  <User className="h-4 w-4 text-gcoin-blue mr-2" />
+                  <span className="text-sm font-medium">Current Balance</span>
+                </div>
+                <p className="text-gray-700">{formatNumber(user?.balance || 0)} GCoin</p>
+              </div>
+              
+              <div className="flex flex-col">
+                <div className="flex items-center text-gray-500 mb-1">
+                  <Calendar className="h-4 w-4 text-gcoin-blue mr-2" />
+                  <span className="text-sm font-medium">Wallet Address</span>
+                </div>
+                <p className="text-gray-700 font-mono text-sm">{user?.wallet_address || 'N/A'}</p>
               </div>
             </div>
           </div>

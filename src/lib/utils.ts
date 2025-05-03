@@ -16,3 +16,32 @@ export function formatDate(dateString: string): string {
     return 'Invalid date'
   }
 }
+
+/**
+ * Format a number with commas and specified decimal places
+ */
+export function formatNumber(value: number | string, decimals = 2): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return num.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+}
+
+/**
+ * Format currency with symbol
+ */
+export function formatCurrency(value: number, currencyCode = 'NGN'): string {
+  const currencySymbols: Record<string, string> = {
+    NGN: '₦',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    GHS: '₵',
+    KES: 'KSh',
+    ZAR: 'R',
+  };
+
+  const symbol = currencySymbols[currencyCode] || '';
+  return `${symbol}${formatNumber(value)}`;
+}

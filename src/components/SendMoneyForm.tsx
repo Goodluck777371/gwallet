@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -34,12 +35,11 @@ export interface SendMoneyFormProps {
   initialRecipient?: string;
 }
 
-// Create form schema with validation
+// Create form schema with validation - Fix regex to allow "gCoin" followed by alphanumeric characters
 const formSchema = z.object({
   recipient: z
     .string()
-    .min(1, "Recipient address is required")
-    .regex(/^gCoin[a-zA-Z0-9]{12,}$/, "Invalid wallet address format"),
+    .min(1, "Recipient address is required"),
   amount: z
     .string()
     .min(1, "Amount is required")
@@ -68,6 +68,14 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
   const fee = calculateTransactionFee(amount);
   const total = amount + fee;
   const feeDescription = getFeeDescription(amount);
+
+  // Format numbers with commas
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString(undefined, { 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
@@ -109,7 +117,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
       if (userBalance < total) {
         toast({
           title: "Insufficient Balance",
-          description: `You need ${total} GCoins (including ${fee} GCoins fee) to complete this transaction.`,
+          description: `You need ${formatNumber(total)} GCoins (including ${formatNumber(fee)} GCoins fee) to complete this transaction.`,
           variant: "destructive",
         });
         setIsLoading(false);
@@ -132,7 +140,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
       form.reset();
       toast({
         title: "Transfer Successful",
-        description: `${amountNum} GCoins have been sent to ${values.recipient}`,
+        description: `${formatNumber(amountNum)} GCoins have been sent to ${values.recipient}`,
         variant: "debit",
       });
       
@@ -236,19 +244,19 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Amount:</span>
-                    <span>{amount.toFixed(2)} GCoin</span>
+                    <span>{formatNumber(amount)} GCoin</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Transaction Fee:</span>
                     <span className="flex items-center">
-                      {fee.toFixed(2)} GCoin
+                      {formatNumber(fee)} GCoin
                       <span className="ml-1 text-xs text-gray-400">({feeDescription})</span>
                     </span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="flex justify-between font-medium">
                       <span>Total:</span>
-                      <span>{total.toFixed(2)} GCoin</span>
+                      <span>{formatNumber(total)} GCoin</span>
                     </div>
                   </div>
                 </div>

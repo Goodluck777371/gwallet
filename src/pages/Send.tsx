@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import { SendMoneyForm } from "@/components/SendMoneyForm";

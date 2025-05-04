@@ -99,13 +99,13 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
   };
 }
 
-// Export a singleton instance for direct import with proper typing
+// Export a singleton instance of toast functions for direct import
 export const toast: ToastFunctions = {
-  toast: (props: Omit<ToasterToast, "id">) => toaster.addToast(props),
-  dismiss: (toastId: string) => toaster.removeToast(toastId),
-  error: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "destructive" }),
-  success: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "success" }),
-  warning: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "warning" }),
-  credit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "credit" }),
-  debit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "debit" }),
+  toast: (props) => toaster.addToast(props),
+  dismiss: (toastId) => toaster.removeToast(toastId),
+  error: (props) => toaster.addToast({ ...props, variant: "destructive" }),
+  success: (props) => toaster.addToast({ ...props, variant: "success" }),
+  warning: (props) => toaster.addToast({ ...props, variant: "warning" }),
+  credit: (props) => toaster.addToast({ ...props, variant: "credit" }),
+  debit: (props) => toaster.addToast({ ...props, variant: "debit" }),
 };

@@ -119,7 +119,7 @@ const TransactionItem = ({ transaction, className = "" }: TransactionItemProps) 
       case 'unstake':
         return "Unstaked GCoin";
       default:
-        return type.charAt(0).toUpperCase() + type.slice(1);
+        return String(type).charAt(0).toUpperCase() + String(type).slice(1);
     }
   };
   

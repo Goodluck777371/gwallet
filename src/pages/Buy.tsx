@@ -34,7 +34,7 @@ const Buy = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [nairaAmount, setNairaAmount] = useState("");
   const [gcoinAmount, setGcoinAmount] = useState(0);
-  const [exchangeRate, setExchangeRate] = useState(850);
+  const [exchangeRate, setExchangeRate] = useState(850); // Fixed exchange rate at 850
   const [fee, setFee] = useState(0);
 
   useEffect(() => {
@@ -43,27 +43,6 @@ const Buy = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, []);
-  
-  useEffect(() => {
-    // Fetch exchange rate
-    const getExchangeRate = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('exchange_rates')
-          .select('rate')
-          .eq('currency', 'NGN')
-          .single();
-          
-        if (data) {
-          setExchangeRate(data.rate);
-        }
-      } catch (error) {
-        console.error("Error fetching exchange rate:", error);
-      }
-    };
-    
-    getExchangeRate();
   }, []);
 
   // Calculate GCoin amount whenever Naira amount changes

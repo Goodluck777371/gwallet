@@ -45,7 +45,7 @@ const AdminLogin = () => {
               <Shield className="mr-2 h-5 w-5" />
               <span>Welcome Big Daddy</span>
             </div>
-          ),
+          ) as any,
           description: 'You are now logged in as administrator.',
           variant: 'success',
         });

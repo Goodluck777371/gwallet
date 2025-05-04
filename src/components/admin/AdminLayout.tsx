@@ -19,7 +19,7 @@ const AdminLayout = () => {
       });
       navigate('/Noadminneeded');
     }
-  }, [navigate]);
+  }, [navigate, toast]);
 
   return (
     <div className="flex h-screen bg-gray-100">

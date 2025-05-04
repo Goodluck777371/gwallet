@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatNumber } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -61,6 +63,7 @@ const AdminUsers = () => {
         return;
       }
 
+      console.log("Fetched users:", data);
       setUsers(data || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -115,29 +118,45 @@ const AdminUsers = () => {
   const filteredUsers = users.filter((user) => {
     const searchStr = searchQuery.toLowerCase();
     return (
-      user.username.toLowerCase().includes(searchStr) ||
-      user.email.toLowerCase().includes(searchStr) ||
-      user.wallet_address.toLowerCase().includes(searchStr)
+      user.username?.toLowerCase().includes(searchStr) ||
+      user.email?.toLowerCase().includes(searchStr) ||
+      user.wallet_address?.toLowerCase().includes(searchStr)
     );
   });
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
 
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-5">Manage Users</h1>
-
-      <div className="mb-5">
-        <Input
-          type="text"
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="flex justify-between items-center mb-5">
+        <div className="w-1/3">
+          <Input
+            type="text"
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div>
+          <p className="font-medium">Total Users: {users.length}</p>
+        </div>
       </div>
 
       {isLoading ? (
-        <p>Loading users...</p>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -150,29 +169,37 @@ const AdminUsers = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell className="font-mono">{user.wallet_address}</TableCell>
-                  <TableCell>{user.balance}</TableCell>
-                  <TableCell>
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.username || "N/A"}</TableCell>
+                    <TableCell>{user.email || "N/A"}</TableCell>
+                    <TableCell className="font-mono">{user.wallet_address || "N/A"}</TableCell>
+                    <TableCell>{formatNumber(user.balance || 0)}</TableCell>
+                    <TableCell>
+                      {formatDate(user.created_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    {searchQuery ? "No users match your search." : "No users found."}
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>

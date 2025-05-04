@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -106,12 +105,11 @@ const AppRoutes = () => (
       
       {/* Admin Routes */}
       <Route path="/Noadminneeded" element={<AdminLogin />} />
-      <Route path="/Noadminneeded" element={<AdminLayout />}>
+      <Route path="/Noadminneeded/*" element={<AdminLayout />}>
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="transactions" element={<AdminTransactions />} />
         <Route path="staking" element={<AdminStaking />} />
-        {/* Additional admin routes can be added here */}
       </Route>
       
       <Route path="*" element={<NotFound />} />

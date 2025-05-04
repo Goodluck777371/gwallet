@@ -36,27 +36,28 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (securityAnswer.toLowerCase() === 'cat') {
-        // Display welcome message
-        toast.success({
-          title: "Welcome Big Daddy",
-          description: 'You are now logged in as administrator.',
-        });
-        
-        // Store admin auth in session storage
-        sessionStorage.setItem('gwallet_admin_auth', 'true');
-        
-        // Navigate to admin dashboard
+    // Check if the answer is "cat" (case insensitive)
+    if (securityAnswer.toLowerCase() === 'cat') {
+      // Display welcome message
+      toast.success({
+        title: "Welcome Big Daddy",
+        description: 'You are now logged in as administrator.',
+      });
+      
+      // Store admin auth in session storage
+      sessionStorage.setItem('gwallet_admin_auth', 'true');
+      
+      // Navigate to admin dashboard (with a slight delay to show the message)
+      setTimeout(() => {
         navigate('/Noadminneeded/dashboard');
-      } else {
-        toast.error({
-          title: 'Security Check Failed',
-          description: 'Incorrect security answer.',
-        });
-      }
+      }, 800);
+    } else {
+      toast.error({
+        title: 'Security Check Failed',
+        description: 'Incorrect security answer.',
+      });
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

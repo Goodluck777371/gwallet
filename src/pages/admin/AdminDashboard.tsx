@@ -17,8 +17,10 @@ import {
   TrendingUp,
   ActivityIcon,
   Database,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardStats {
   totalUsers: number;
@@ -30,6 +32,7 @@ interface DashboardStats {
 }
 
 const AdminDashboard = () => {
+  const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalGcoins: 0,
@@ -43,28 +46,62 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
+        setIsLoading(true);
+        
         // Get total users count
-        const { count: totalUsers } = await supabase
+        const { count: totalUsers, error: usersError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
+          
+        if (usersError) {
+          console.error('Error fetching user count:', usersError);
+          toast.error({ 
+            title: "Error", 
+            description: "Failed to fetch user data" 
+          });
+        }
 
         // Get total GCoins in circulation
-        const { data: balanceData } = await supabase
+        const { data: balanceData, error: balanceError } = await supabase
           .from('profiles')
           .select('balance');
+        
+        if (balanceError) {
+          console.error('Error fetching balances:', balanceError);
+          toast.error({ 
+            title: "Error", 
+            description: "Failed to fetch balance data" 
+          });
+        }
         
         const totalGcoins = balanceData?.reduce((sum, user) => sum + (user.balance || 0), 0) || 0;
 
         // Get total transactions
-        const { count: totalTransactions } = await supabase
+        const { count: totalTransactions, error: txError } = await supabase
           .from('transactions')
           .select('*', { count: 'exact', head: true });
+          
+        if (txError) {
+          console.error('Error fetching transaction count:', txError);
+          toast.error({ 
+            title: "Error", 
+            description: "Failed to fetch transaction data" 
+          });
+        }
 
         // Get active stakes
-        const { data: activeStakes } = await supabase
+        const { data: activeStakes, error: stakesError } = await supabase
           .from('staking_positions')
           .select('*')
           .eq('status', 'active');
+          
+        if (stakesError) {
+          console.error('Error fetching stakes:', stakesError);
+          toast.error({ 
+            title: "Error", 
+            description: "Failed to fetch staking data" 
+          });
+        }
         
         const stakedAmount = activeStakes?.reduce((sum, stake) => sum + stake.amount, 0) || 0;
 
@@ -72,11 +109,19 @@ const AdminDashboard = () => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        const { data: recentTransactions } = await supabase
+        const { data: recentTransactions, error: recentTxError } = await supabase
           .from('transactions')
           .select('timestamp')
           .gte('timestamp', thirtyDaysAgo.toISOString())
           .order('timestamp', { ascending: true });
+          
+        if (recentTxError) {
+          console.error('Error fetching recent transactions:', recentTxError);
+          toast.error({ 
+            title: "Error", 
+            description: "Failed to fetch transaction history" 
+          });
+        }
 
         // Process transaction data for chart
         const dailyTransactions = processDailyTransactions(recentTransactions || []);
@@ -92,13 +137,17 @@ const AdminDashboard = () => {
 
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+        toast.error({ 
+          title: "Error", 
+          description: "Failed to load dashboard statistics" 
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardStats();
-  }, []);
+  }, [toast]);
 
   // Process transactions to get daily count
   const processDailyTransactions = (transactions: any[]) => {
@@ -109,11 +158,21 @@ const AdminDashboard = () => {
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
     
-    // Convert to array format for chart
-    return Object.entries(dailyCounts).map(([date, count]) => ({
-      date: date,
-      count
-    })).slice(-14); // Last 14 days
+    // Fill in missing dates in the last 14 days
+    const result = [];
+    const now = new Date();
+    
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(now.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      result.push({
+        date: dateStr,
+        count: dailyCounts[dateStr] || 0
+      });
+    }
+    
+    return result;
   };
 
   // Stat cards to display
@@ -147,6 +206,17 @@ const AdminDashboard = () => {
       iconClass: "bg-amber-100 text-amber-600",
     },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="p-6 h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -220,8 +290,8 @@ const AdminDashboard = () => {
                     />
                     <YAxis />
                     <Tooltip 
-                      formatter={(value, name) => [`${value} transactions`, 'Count']}
-                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
+                      formatter={(value: any, name: any) => [`${value} transactions`, 'Count']}
+                      labelFormatter={(label: any) => `Date: ${new Date(label).toLocaleDateString()}`}
                     />
                     <Line 
                       type="monotone" 
@@ -294,7 +364,7 @@ const AdminDashboard = () => {
                   </div>
                   <div className="border-l-2 border-purple-500 pl-4 py-1">
                     <p className="text-sm font-medium">New Admin User Added</p>
-                    <p className="text-xs text-gray-500">Mar 12, 2025</p>
+                    <p className="text-xs text-gray-500">{new Date().toLocaleDateString()}</p>
                   </div>
                 </div>
               </CardContent>

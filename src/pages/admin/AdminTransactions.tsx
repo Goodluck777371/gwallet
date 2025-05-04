@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -56,7 +57,7 @@ const AdminTransactions = () => {
     };
 
     fetchTransactions();
-  }, [user, toast]);
+  }, [toast]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -101,7 +102,7 @@ const AdminTransactions = () => {
                   <TableCell>{formatNumber(transaction.amount)}</TableCell>
                   <TableCell>{transaction.sender}</TableCell>
                   <TableCell>{transaction.recipient}</TableCell>
-                  <TableCell>{formatDate(new Date(transaction.timestamp).toISOString())}</TableCell>
+                  <TableCell>{formatDate(transaction.timestamp)}</TableCell>
                   <TableCell>{transaction.status}</TableCell>
                   <TableCell>{transaction.description}</TableCell>
                   <TableCell>{formatNumber(transaction.fee || 0)}</TableCell>

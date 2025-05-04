@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -20,6 +21,12 @@ import LiveChat from "./components/LiveChat";
 import SplashScreen from "./components/SplashScreen";
 import Exchange from "./pages/Exchange";
 import Profile from "./pages/Profile";
+import AdminLogin from "./pages/AdminLogin";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminStaking from "./pages/admin/AdminStaking";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +102,17 @@ const AppRoutes = () => (
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/exchange" element={<ProtectedRoute><Exchange /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      
+      {/* Admin Routes */}
+      <Route path="/Noadminneeded" element={<AdminLogin />} />
+      <Route path="/Noadminneeded" element={<AdminLayout />}>
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="transactions" element={<AdminTransactions />} />
+        <Route path="staking" element={<AdminStaking />} />
+        {/* Additional admin routes can be added here */}
+      </Route>
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
     <LiveChat />

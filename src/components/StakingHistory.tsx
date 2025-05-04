@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +38,7 @@ export interface StakingPosition {
 
 const StakingHistory = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [stakings, setStakings] = useState<StakingPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unstakeDialog, setUnstakeDialog] = useState<{ open: boolean, position: StakingPosition | null }>({
@@ -61,10 +62,9 @@ const StakingHistory = () => {
         setStakings(data || []);
       } catch (error) {
         console.error('Error fetching staking positions:', error);
-        toast({
+        toast.error({
           title: "Error",
           description: "Failed to load staking history",
-          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
@@ -118,6 +118,7 @@ const StakingHistory = () => {
 
   const confirmUnstake = async () => {
     if (!unstakeDialog.position) return;
+    setIsLoading(true);
     
     try {
       const { error } = await supabase.rpc('unstake_gcoin', {
@@ -126,19 +127,18 @@ const StakingHistory = () => {
       
       if (error) throw error;
       
-      toast({
+      toast.credit({
         title: "Unstaking Successful",
         description: "Your GCoins have been returned to your wallet",
-        variant: "credit",
       });
     } catch (error: any) {
-      toast({
+      toast.error({
         title: "Unstaking Failed",
         description: error.message || "An unexpected error occurred",
-        variant: "destructive",
       });
     } finally {
       setUnstakeDialog({ open: false, position: null });
+      setIsLoading(false);
     }
   };
 

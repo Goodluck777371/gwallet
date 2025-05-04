@@ -51,8 +51,8 @@ const Buy = () => {
       const naira = parseFloat(nairaAmount);
       // Calculate GCoin based on exchange rate
       const rawGcoin = naira / exchangeRate;
-      // Calculate fee (1%)
-      const feeAmount = rawGcoin * 0.01;
+      // Fixed fee of 1 GCoin
+      const feeAmount = 1;
       setFee(feeAmount);
       // Final GCoin amount after fee
       setGcoinAmount(rawGcoin - feeAmount);
@@ -133,7 +133,7 @@ const Buy = () => {
                     </div>
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Fee (1%):</span>
+                      <span className="text-muted-foreground">Fee:</span>
                       <span className="font-medium">
                         {formatNumber(fee)} GCoin (₦{formatNumber(fee * exchangeRate)})
                       </span>

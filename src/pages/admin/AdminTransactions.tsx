@@ -43,9 +43,10 @@ const AdminTransactions = () => {
 
         if (error) {
           console.error("Error fetching transactions:", error);
-          toast.error({
+          toast({
             title: "Error",
             description: "Failed to load transactions",
+            variant: "destructive"
           });
           return;
         }

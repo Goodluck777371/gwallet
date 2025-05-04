@@ -13,9 +13,10 @@ const AdminLayout = () => {
     const isAdminAuth = sessionStorage.getItem('gwallet_admin_auth') === 'true';
     
     if (!isAdminAuth) {
-      toast.error({
+      toast({
         title: "Access Denied",
         description: "You must login as an administrator to access this page.",
+        variant: "destructive"
       });
       navigate('/Noadminneeded');
     }

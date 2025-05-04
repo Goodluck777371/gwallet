@@ -23,9 +23,10 @@ const AdminLogin = () => {
       if (password === 'DeadAdmin') {
         setShowSecurityQuestion(true);
       } else {
-        toast.error({
+        toast({
           title: 'Access Denied',
           description: 'Incorrect administrator password.',
+          variant: "destructive"
         });
       }
       setIsLoading(false);
@@ -39,9 +40,10 @@ const AdminLogin = () => {
     // Check if the answer is "cat" (case insensitive)
     if (securityAnswer.toLowerCase() === 'cat') {
       // Display welcome message
-      toast.success({
+      toast({
         title: "Welcome Big Daddy",
         description: 'You are now logged in as administrator.',
+        variant: "success"
       });
       
       // Store admin auth in session storage
@@ -52,9 +54,10 @@ const AdminLogin = () => {
         navigate('/Noadminneeded/dashboard');
       }, 800);
     } else {
-      toast.error({
+      toast({
         title: 'Security Check Failed',
         description: 'Incorrect security answer.',
+        variant: "destructive"
       });
       setIsLoading(false);
     }

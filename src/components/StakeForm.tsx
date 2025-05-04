@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -77,10 +76,9 @@ const StakeForm = ({ onSuccess }: StakeFormProps) => {
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
-      toast({
+      toast.error({
         title: "Error",
         description: "You must be logged in to stake GCoins",
-        variant: "destructive",
       });
       return;
     }
@@ -106,10 +104,9 @@ const StakeForm = ({ onSuccess }: StakeFormProps) => {
       
       // Check if balance is sufficient
       if (userBalance < amountNum) {
-        toast({
+        toast.error({
           title: "Insufficient Balance",
           description: `You need ${amountNum} GCoins to stake.`,
-          variant: "destructive",
         });
         setIsLoading(false);
         return;
@@ -129,10 +126,9 @@ const StakeForm = ({ onSuccess }: StakeFormProps) => {
       form.reset();
       onSuccess();
     } catch (error: any) {
-      toast({
+      toast.error({
         title: "Staking Failed",
         description: error.message || "An unexpected error occurred",
-        variant: "destructive",
       });
       console.error("Stake error:", error);
     } finally {

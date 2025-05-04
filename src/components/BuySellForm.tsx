@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -138,10 +137,9 @@ const BuySellForm: React.FC<BuySellFormProps> = ({ mode, onSuccess }) => {
           throw new Error(error.message || "Failed to buy GCoins");
         }
         
-        toast({
+        toast.credit({
           title: "Purchase Successful",
           description: `You have successfully purchased ${resultAmount?.toFixed(2)} GCoins`,
-          variant: "credit",
         });
       } else {
         // Sell GCoins for currency
@@ -151,10 +149,9 @@ const BuySellForm: React.FC<BuySellFormProps> = ({ mode, onSuccess }) => {
           throw new Error(error.message || "Failed to sell GCoins");
         }
         
-        toast({
+        toast.debit({
           title: "Sale Successful",
           description: `You have successfully sold ${amount} GCoins for ${resultAmount?.toFixed(2)} ${values.currency}`,
-          variant: "debit",
         });
       }
       
@@ -179,10 +176,9 @@ const BuySellForm: React.FC<BuySellFormProps> = ({ mode, onSuccess }) => {
       // Call success callback
       onSuccess();
     } catch (error: any) {
-      toast({
+      toast.error({
         title: `${mode === "buy" ? "Purchase" : "Sale"} Failed`,
         description: error.message || `Failed to ${mode} GCoins`,
-        variant: "destructive",
       });
     } finally {
       setIsLoading(false);

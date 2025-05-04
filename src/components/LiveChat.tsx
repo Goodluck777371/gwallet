@@ -116,7 +116,7 @@ const LiveChat: React.FC = () => {
         setMessages(prev => [...prev, botMessage]);
         
         // Show toast notification
-        toast({
+        toast.toast({
           title: "Message sent",
           description: "Your message has been forwarded to our support team.",
           variant: "default"

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -79,7 +78,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
-      toast({
+      toast.error({
         title: "Error",
         description: "You must be logged in to send GCoins",
         variant: "destructive",
@@ -115,7 +114,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
       
       // Check if balance is sufficient for amount + fee
       if (userBalance < total) {
-        toast({
+        toast.error({
           title: "Insufficient Balance",
           description: `You need ${formatNumber(total)} GCoins (including ${formatNumber(fee)} GCoins fee) to complete this transaction.`,
           variant: "destructive",
@@ -138,7 +137,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
 
       // Success
       form.reset();
-      toast({
+      toast.debit({
         title: "Transfer Successful",
         description: `${formatNumber(amountNum)} GCoins have been sent to ${values.recipient}`,
         variant: "debit",
@@ -146,7 +145,7 @@ export const SendMoneyForm = ({ onSuccess, initialRecipient = '' }: SendMoneyFor
       
       onSuccess();
     } catch (error: any) {
-      toast({
+      toast.error({
         title: "Transfer Failed",
         description: error.message || "An unexpected error occurred",
         variant: "destructive",

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
@@ -63,10 +62,9 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
         if (decodedText.startsWith('gCoin')) {
           onCodeDetected(decodedText);
         } else {
-          toast({
+          toast.error({
             title: "Invalid QR Code",
             description: "The scanned QR code does not contain a valid wallet address.",
-            variant: "destructive",
           });
         }
       }).catch(error => {
@@ -88,10 +86,9 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     ).catch((error) => {
       console.error('Error starting scanner:', error);
       setScanning(false);
-      toast({
+      toast.error({
         title: "Scanner Error",
         description: "Could not start the scanner. Please make sure camera permissions are granted.",
-        variant: "destructive",
       });
     });
   };

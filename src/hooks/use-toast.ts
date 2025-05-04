@@ -84,7 +84,9 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
       setState(state);
     });
     
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
   
   return {

@@ -28,6 +28,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminStaking from "./pages/admin/AdminStaking";
 
+// Create a client
 const queryClient = new QueryClient();
 
 // Protected route component with splash screen
@@ -119,19 +120,21 @@ const AppRoutes = () => (
   </>
 );
 
-// Fixed: Changed the order - BrowserRouter should be the outermost router-related wrapper
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-          <Toaster />
-          <Sonner />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+// App component - fixed React import order
+const App = () => {
+  return (
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <AppRoutes />
+            <Toaster />
+            <Sonner />
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
+  );
+};
 
 export default App;

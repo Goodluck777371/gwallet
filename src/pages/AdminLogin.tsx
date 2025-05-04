@@ -39,18 +39,14 @@ const AdminLogin = () => {
     setTimeout(() => {
       if (securityAnswer.toLowerCase() === 'cat') {
         // Display welcome message
-        toast({
-          title: (
-            <div className="flex items-center">
-              <Shield className="mr-2 h-5 w-5" />
-              <span>Welcome Big Daddy</span>
-            </div>
-          ) as any,
+        toast.success({
+          title: "Welcome Big Daddy",
           description: 'You are now logged in as administrator.',
-          variant: 'success',
         });
+        
         // Store admin auth in session storage
         sessionStorage.setItem('gwallet_admin_auth', 'true');
+        
         // Navigate to admin dashboard
         navigate('/Noadminneeded/dashboard');
       } else {

@@ -78,47 +78,23 @@ export function useToast() {
   
   return {
     toasts: state.toasts,
-    toast: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast(props);
-    },
+    toast: (props: Omit<ToasterToast, "id">) => toaster.addToast(props),
     dismiss: (toastId: string) => toaster.removeToast(toastId),
-    error: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast({ ...props, variant: "destructive" });
-    },
-    success: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast({ ...props, variant: "success" });
-    },
-    warning: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast({ ...props, variant: "warning" });
-    },
-    credit: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast({ ...props, variant: "credit" });
-    },
-    debit: (props: Omit<ToasterToast, "id">) => {
-      return toaster.addToast({ ...props, variant: "debit" });
-    },
+    error: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "destructive" }),
+    success: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "success" }),
+    warning: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "warning" }),
+    credit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "credit" }),
+    debit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "debit" }),
   };
 }
 
 // Export a singleton instance for direct import
 export const toast = {
-  toast: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast(props);
-  },
+  toast: (props: Omit<ToasterToast, "id">) => toaster.addToast(props),
   dismiss: (toastId: string) => toaster.removeToast(toastId),
-  error: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast({ ...props, variant: "destructive" });
-  },
-  success: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast({ ...props, variant: "success" });
-  },
-  warning: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast({ ...props, variant: "warning" });
-  },
-  credit: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast({ ...props, variant: "credit" });
-  },
-  debit: (props: Omit<ToasterToast, "id">) => {
-    return toaster.addToast({ ...props, variant: "debit" });
-  },
+  error: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "destructive" }),
+  success: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "success" }),
+  warning: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "warning" }),
+  credit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "credit" }),
+  debit: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "debit" }),
 };

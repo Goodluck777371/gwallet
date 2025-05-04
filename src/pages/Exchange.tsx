@@ -119,7 +119,7 @@ const Exchange = () => {
 
   // Handle exchange
   const handleExchange = () => {
-    toast({
+    toast.toast({
       title: "Coming Soon! 🚀",
       description: "Currency exchange feature will be available soon.",
       variant: "default",
@@ -298,7 +298,12 @@ const Exchange = () => {
                         />
                         <YAxis 
                           fontSize={12}
-                          tickFormatter={(value) => value.toLocaleString()}
+                          tickFormatter={(value) => {
+                            // Ensure value is treated as a number
+                            return typeof value === 'number' 
+                              ? value.toLocaleString() 
+                              : Number(value).toLocaleString();
+                          }}
                         />
                         <Tooltip 
                           content={({ active, payload }) => {
@@ -309,7 +314,7 @@ const Exchange = () => {
                                   <p className="text-sm">
                                     {activeCurrency === "GCoin" 
                                       ? `1 GCoin = ${payload[0].value}`
-                                      : `${formatNumber(payload[0].value)} ${activeCurrency}/GCoin`}
+                                      : `${formatNumber(Number(payload[0].value))} ${activeCurrency}/GCoin`}
                                   </p>
                                 </div>
                               );

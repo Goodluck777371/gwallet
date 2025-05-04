@@ -65,7 +65,18 @@ export const toaster = {
   },
 };
 
-export function useToast() {
+// Define the toast function type
+export interface ToastFunctions {
+  toast: (props: Omit<ToasterToast, "id">) => string;
+  dismiss: (toastId: string) => void;
+  error: (props: Omit<ToasterToast, "id">) => string;
+  success: (props: Omit<ToasterToast, "id">) => string;
+  warning: (props: Omit<ToasterToast, "id">) => string;
+  credit: (props: Omit<ToasterToast, "id">) => string;
+  debit: (props: Omit<ToasterToast, "id">) => string;
+}
+
+export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
   const [state, setState] = useState<ToasterToastState>({ toasts: [] });
 
   useEffect(() => {
@@ -89,7 +100,7 @@ export function useToast() {
 }
 
 // Export a singleton instance for direct import
-export const toast = {
+export const toast: ToastFunctions = {
   toast: (props: Omit<ToasterToast, "id">) => toaster.addToast(props),
   dismiss: (toastId: string) => toaster.removeToast(toastId),
   error: (props: Omit<ToasterToast, "id">) => toaster.addToast({ ...props, variant: "destructive" }),

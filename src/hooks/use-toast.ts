@@ -65,7 +65,7 @@ export const toaster = {
   },
 };
 
-// Define the toast function interface
+// Define the toast function interface with all the needed methods
 export interface ToastFunctions {
   (props: Omit<ToasterToast, "id">): string;
   toast: (props: Omit<ToasterToast, "id">) => string;
@@ -90,6 +90,7 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
     };
   }, []);
   
+  // Create the main toast function with all the method properties
   const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as unknown as ToastFunctions;
   
   toast.toast = (props) => toaster.addToast(props);

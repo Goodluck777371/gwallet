@@ -58,7 +58,7 @@ const Exchange = () => {
         setExchangeRate(mockRate);
       } catch (error) {
         console.error("Failed to fetch exchange rate", error);
-        toast.toast({
+        toast({
           title: "Error",
           description: "Failed to fetch exchange rate.",
         });
@@ -86,7 +86,7 @@ const Exchange = () => {
 
   const handleExchange = async () => {
     if (!user) {
-      toast.toast({
+      toast({
         title: "Error",
         description: "You must be logged in to perform this action.",
       });
@@ -94,7 +94,7 @@ const Exchange = () => {
     }
 
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      toast.toast({
+      toast({
         title: "Error",
         description: "Please enter a valid amount.",
       });
@@ -113,7 +113,7 @@ const Exchange = () => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Mock successful exchange
-      toast.toast({
+      toast({
         title: "Exchange Successful",
         description: `${amount} ${fromCurrency} has been exchanged to ${convertedAmount?.toFixed(2)} ${toCurrency}.`,
       });
@@ -124,7 +124,7 @@ const Exchange = () => {
       navigate("/dashboard");
     } catch (error) {
       console.error("Exchange failed", error);
-      toast.toast({
+      toast({
         title: "Exchange Failed",
         description: "There was an error processing your exchange. Please try again.",
       });

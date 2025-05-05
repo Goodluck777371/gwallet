@@ -65,16 +65,16 @@ export const toaster = {
   },
 };
 
-// Define the toast function interface with all the needed methods
+// Properly define the toast function interface with all variants
 export interface ToastFunctions {
   (props: Omit<ToasterToast, "id">): string;
   toast: (props: Omit<ToasterToast, "id">) => string;
-  dismiss: (toastId: string) => void;
   error: (props: Omit<ToasterToast, "id">) => string;
   success: (props: Omit<ToasterToast, "id">) => string;
   warning: (props: Omit<ToasterToast, "id">) => string;
   credit: (props: Omit<ToasterToast, "id">) => string;
   debit: (props: Omit<ToasterToast, "id">) => string;
+  dismiss: (toastId: string) => void;
 }
 
 export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
@@ -110,12 +110,12 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
 // Create a singleton instance with proper type definitions
 const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as ToastFunctions;
 
+toast.toast = (props) => toaster.addToast(props);
 toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
 toast.success = (props) => toaster.addToast({ ...props, variant: "success" });
 toast.warning = (props) => toaster.addToast({ ...props, variant: "warning" });
 toast.credit = (props) => toaster.addToast({ ...props, variant: "credit" });
 toast.debit = (props) => toaster.addToast({ ...props, variant: "debit" });
 toast.dismiss = (toastId) => toaster.removeToast(toastId);
-toast.toast = (props) => toaster.addToast(props);
 
 export { toast };

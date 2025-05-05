@@ -15,7 +15,7 @@ import {
   Users,
   Wallet,
   TrendingUp,
-  ActivityIcon,
+  Activity,
   Database,
   Clock,
   Loader2,
@@ -223,7 +223,7 @@ const AdminDashboard = () => {
       title: "Total Transactions",
       value: stats.totalTransactions,
       description: "All time",
-      icon: <ActivityIcon className="h-6 w-6" />,
+      icon: <Activity className="h-6 w-6" />,
       iconClass: "bg-purple-100 text-purple-600",
     },
     {
@@ -277,7 +277,7 @@ const AdminDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat) => (
-          <Card key={stat.title} className="overflow-hidden transition-shadow hover:shadow-lg">
+          <Card key={stat.title} className="overflow-hidden transition-shadow hover:shadow-lg border-t-4 border-t-blue-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
               <CardTitle className="text-sm font-medium text-gray-500">
                 {stat.title}
@@ -332,7 +332,7 @@ const AdminDashboard = () => {
       <Tabs defaultValue="activity" className="mb-6">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="activity" className="flex items-center gap-2">
-            <ActivityIcon className="h-4 w-4" />
+            <Activity className="h-4 w-4" />
             Activity
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2">
@@ -343,7 +343,7 @@ const AdminDashboard = () => {
         
         <TabsContent value="activity" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="shadow-md">
+            <Card className="shadow-md border-t-4 border-t-purple-500">
               <CardHeader>
                 <CardTitle>Transaction Activity</CardTitle>
                 <CardDescription>
@@ -391,7 +391,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
             
-            <Card className="shadow-md">
+            <Card className="shadow-md border-t-4 border-t-green-500">
               <CardHeader>
                 <CardTitle>Transactions by Type</CardTitle>
                 <CardDescription>
@@ -435,7 +435,7 @@ const AdminDashboard = () => {
             </Card>
           </div>
           
-          <Card className="shadow-md">
+          <Card className="shadow-md border-t-4 border-t-amber-500">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>
@@ -489,7 +489,7 @@ const AdminDashboard = () => {
         
         <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="shadow-md">
+            <Card className="shadow-md border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle>System Health</CardTitle>
                 <CardDescription>
@@ -513,7 +513,7 @@ const AdminDashboard = () => {
                   </div>
                   <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium">Last Backup</span>
-                    <span className="text-sm">Today, 04:30 AM</span>
+                    <span className="text-sm">{new Date().toLocaleDateString()}, 04:30 AM</span>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium">Total Storage Used</span>
@@ -526,7 +526,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
             
-            <Card className="shadow-md">
+            <Card className="shadow-md border-l-4 border-l-purple-500">
               <CardHeader>
                 <CardTitle>Recent Updates</CardTitle>
                 <CardDescription>
@@ -556,7 +556,7 @@ const AdminDashboard = () => {
             </Card>
           </div>
           
-          <Card className="shadow-md">
+          <Card className="shadow-md border-l-4 border-l-green-500">
             <CardHeader>
               <CardTitle>System Overview</CardTitle>
               <CardDescription>

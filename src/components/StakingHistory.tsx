@@ -49,6 +49,19 @@ const StakingHistory = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    // Check for completed stakes that need to be processed
+    const checkCompletedStakes = async () => {
+      try {
+        // First attempt to process completed stakes via the database function
+        await supabase.rpc('process_completed_stakes');
+        
+        // Then fetch current staking positions
+        fetchStakings();
+      } catch (error) {
+        console.error('Error checking completed stakes:', error);
+      }
+    };
+
     const fetchStakings = async () => {
       try {
         const { data, error } = await supabase
@@ -64,14 +77,15 @@ const StakingHistory = () => {
         console.error('Error fetching staking positions:', error);
         toast.error({
           title: "Error",
-          description: "Failed to load staking history",
+          description: "Failed to load staking history"
         });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStakings();
+    // Check completed stakes first, which will then fetch current positions
+    checkCompletedStakes();
     
     // Set up realtime subscription for staking positions updates
     const subscription = supabase
@@ -129,12 +143,12 @@ const StakingHistory = () => {
       
       toast.credit({
         title: "Unstaking Successful",
-        description: "Your GCoins have been returned to your wallet",
+        description: "Your GCoins have been returned to your wallet"
       });
     } catch (error: any) {
       toast.error({
         title: "Unstaking Failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred"
       });
     } finally {
       setUnstakeDialog({ open: false, position: null });
@@ -144,6 +158,36 @@ const StakingHistory = () => {
 
   const canUnstake = (position: StakingPosition) => {
     return position.status === 'active';
+  };
+
+  const isStakeCompleted = (position: StakingPosition) => {
+    return new Date(position.end_date) <= new Date() && position.status === 'active';
+  };
+
+  // Function to check and mark stake as completed if needed
+  const processCompletedStake = async (position: StakingPosition) => {
+    if (isStakeCompleted(position)) {
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.rpc('unstake_gcoin', {
+          staking_id: position.id
+        });
+        
+        if (error) throw error;
+        
+        toast.success({
+          title: "Stake Completed",
+          description: `Your stake of ${position.amount} GCoins has been returned with ${position.estimated_reward} GCoins reward`
+        });
+      } catch (error: any) {
+        toast.error({
+          title: "Error Processing Stake",
+          description: error.message || "Failed to process completed stake"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   return (
@@ -167,7 +211,7 @@ const StakingHistory = () => {
           </TableHeader>
           <TableBody>
             {stakings.map((position) => (
-              <TableRow key={position.id}>
+              <TableRow key={position.id} className={isStakeCompleted(position) ? "bg-amber-50" : ""}>
                 <TableCell>{formatDate(position.start_date)}</TableCell>
                 <TableCell>{formatDate(position.end_date)}</TableCell>
                 <TableCell>{position.amount.toFixed(2)} GCoin</TableCell>
@@ -175,17 +219,33 @@ const StakingHistory = () => {
                 <TableCell className="text-green-600">+{position.estimated_reward.toFixed(2)} GCoin</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-md text-xs font-medium ${getStatusClassName(position.status)}`}>
-                    {position.status.charAt(0).toUpperCase() + position.status.slice(1)}
+                    {isStakeCompleted(position) 
+                      ? <span className="flex items-center gap-1">
+                          Ready for collection
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          </span>
+                        </span>
+                      : position.status.charAt(0).toUpperCase() + position.status.slice(1)
+                    }
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
                   {canUnstake(position) ? (
                     <Button
-                      variant="outline"
+                      variant={isStakeCompleted(position) ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handleUnstakeRequest(position)}
+                      className={isStakeCompleted(position) ? "bg-green-600 hover:bg-green-700" : ""}
+                      onClick={() => {
+                        if (isStakeCompleted(position)) {
+                          processCompletedStake(position);
+                        } else {
+                          handleUnstakeRequest(position);
+                        }
+                      }}
                     >
-                      Unstake
+                      {isStakeCompleted(position) ? "Collect Rewards" : "Unstake"}
                     </Button>
                   ) : (
                     <span className="text-sm text-gray-400">-</span>

@@ -91,7 +91,7 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
   }, []);
   
   // Create the main toast function with all the method properties
-  const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as unknown as ToastFunctions;
+  const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as ToastFunctions;
   
   toast.toast = (props) => toaster.addToast(props);
   toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
@@ -108,7 +108,7 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
 }
 
 // Create a singleton instance with proper type definitions
-const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as unknown as ToastFunctions;
+const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as ToastFunctions;
 
 toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
 toast.success = (props) => toaster.addToast({ ...props, variant: "success" });

@@ -51,7 +51,7 @@ const AdminTransactions = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [toast]);
+  }, []);
   
   useEffect(() => {
     applyFilters();
@@ -60,6 +60,7 @@ const AdminTransactions = () => {
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
+      // Fetch all transactions for admin view
       const { data, error } = await supabase
         .from('transactions')
         .select('*')

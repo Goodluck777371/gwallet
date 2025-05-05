@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
-  Exchange
+  RefreshCw,
+  BarChart2,
+  Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +63,7 @@ const AdminSidebar = () => {
     },
     { 
       label: "Exchange", 
-      icon: <Exchange className="h-5 w-5 text-blue-400" />,
+      icon: <RefreshCw className="h-5 w-5 text-blue-400" />,
       path: "/Noadminneeded/exchange" 
     },
     { 

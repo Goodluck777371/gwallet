@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -46,52 +47,32 @@ const AdminStaking = () => {
   });
 
   useEffect(() => {
-    if (!user?.id) return;
-
-    const fetchStakings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('staking_positions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        setStakings(data || []);
-      } catch (error) {
-        console.error('Error fetching staking positions:', error);
-        toast.error({
-          title: "Error",
-          description: "Failed to load staking history",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchStakings();
-    
-    // Set up realtime subscription for staking positions updates
-    const subscription = supabase
-      .channel('schema_db_changes')
-      .on('postgres_changes', 
-        {
-          event: '*', 
-          schema: 'public',
-          table: 'staking_positions',
-          filter: `user_id=eq.${user.id}`
-        }, 
-        () => {
-          // Refresh staking positions when there is a change
-          fetchStakings();
-        })
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(subscription);
-    };
   }, [user?.id]);
+
+  const fetchStakings = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all staking positions for admin view
+      const { data, error } = await supabase
+        .from('staking_positions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setStakings(data || []);
+    } catch (error) {
+      console.error('Error fetching staking positions:', error);
+      toast.error({
+        title: "Error",
+        description: "Failed to load staking history",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -128,8 +109,11 @@ const AdminStaking = () => {
       
       toast.credit({
         title: "Unstaking Successful",
-        description: "Your GCoins have been returned to your wallet",
+        description: "GCoins have been returned to user's wallet",
       });
+      
+      // Refresh staking positions
+      fetchStakings();
     } catch (error: any) {
       toast.error({
         title: "Unstaking Failed",
@@ -141,12 +125,49 @@ const AdminStaking = () => {
     }
   };
 
+  const handleProcessCompletedStakes = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc('process_completed_stakes');
+      
+      if (error) throw error;
+      
+      toast.success({
+        title: "Success",
+        description: "Completed stakes have been processed successfully",
+      });
+      
+      // Refresh staking positions
+      fetchStakings();
+    } catch (error: any) {
+      toast.error({
+        title: "Processing Failed",
+        description: error.message || "Failed to process completed stakes",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const canUnstake = (position: StakingPosition) => {
     return position.status === 'active';
   };
 
   return (
     <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Staking Positions
+        </h1>
+        <Button 
+          onClick={handleProcessCompletedStakes}
+          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+        >
+          <TrendingUp className="mr-2 h-4 w-4" />
+          Process Completed Stakes
+        </Button>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -155,6 +176,7 @@ const AdminStaking = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>User ID</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Amount</TableHead>
@@ -167,6 +189,7 @@ const AdminStaking = () => {
           <TableBody>
             {stakings.map((position) => (
               <TableRow key={position.id}>
+                <TableCell className="font-mono text-xs truncate">{position.user_id}</TableCell>
                 <TableCell>{formatDate(position.start_date)}</TableCell>
                 <TableCell>{formatDate(position.end_date)}</TableCell>
                 <TableCell>{position.amount.toFixed(2)} GCoin</TableCell>
@@ -199,7 +222,7 @@ const AdminStaking = () => {
           <TrendingUp className="h-12 w-12 text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900">No Staking History</h3>
           <p className="text-sm text-gray-500 max-w-sm mt-2">
-            You haven't staked any GCoins yet. Start staking to earn rewards.
+            There are no staking positions in the system yet.
           </p>
         </div>
       )}
@@ -219,8 +242,8 @@ const AdminStaking = () => {
               {unstakeDialog.position && (
                 <>
                   <p className="mb-4">
-                    Unstaking your {unstakeDialog.position.amount} GCoins before the due date 
-                    will incur a 10% penalty on your initial stake amount.
+                    Unstaking these {unstakeDialog.position.amount} GCoins before the due date 
+                    will incur a 10% penalty on the initial stake amount.
                   </p>
                   <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-4">
                     <div className="text-sm space-y-2">
@@ -233,7 +256,7 @@ const AdminStaking = () => {
                         <span>-{(unstakeDialog.position.amount * 0.1).toFixed(2)} GCoin</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 mt-1 font-medium flex justify-between">
-                        <span>You will receive:</span>
+                        <span>User will receive:</span>
                         <span>{(unstakeDialog.position.amount * 0.9).toFixed(2)} GCoin</span>
                       </div>
                     </div>

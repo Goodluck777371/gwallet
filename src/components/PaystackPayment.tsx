@@ -133,7 +133,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
         },
         onClose: function() {
           // User closed the payment window
-          toast.toast({
+          toast({
             title: "Payment Cancelled",
             description: "You have cancelled the payment."
           });

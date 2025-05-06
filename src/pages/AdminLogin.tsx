@@ -27,9 +27,10 @@ const AdminLogin = () => {
     e.preventDefault();
     
     if (!email || !password) {
-      toast.warning({
+      toast({
         title: "Missing Information",
-        description: "Please enter both email and password."
+        description: "Please enter both email and password.",
+        variant: "warning"
       });
       return;
     }

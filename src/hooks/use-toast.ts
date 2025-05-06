@@ -68,10 +68,10 @@ export const toaster = {
 // Define the toast function interface with all variants
 export interface ToastFunctions {
   (props: Omit<ToasterToast, "id">): string;
-  toast: (props: Omit<ToasterToast, "id">) => string;
-  error: (props: Omit<ToasterToast, "id">) => string;
   success: (props: Omit<ToasterToast, "id">) => string;
+  error: (props: Omit<ToasterToast, "id">) => string;
   warning: (props: Omit<ToasterToast, "id">) => string;
+  toast: (props: Omit<ToasterToast, "id">) => string;
   credit: (props: Omit<ToasterToast, "id">) => string;
   debit: (props: Omit<ToasterToast, "id">) => string;
   dismiss: (toastId: string) => void;
@@ -95,8 +95,8 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
   
   // Add variant methods
   toast.toast = (props) => toaster.addToast(props);
-  toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
   toast.success = (props) => toaster.addToast({ ...props, variant: "success" });
+  toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
   toast.warning = (props) => toaster.addToast({ ...props, variant: "warning" });
   toast.credit = (props) => toaster.addToast({ ...props, variant: "credit" });
   toast.debit = (props) => toaster.addToast({ ...props, variant: "debit" });
@@ -113,8 +113,8 @@ const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as 
 
 // Add variant methods to the singleton
 toast.toast = (props) => toaster.addToast(props);
-toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
 toast.success = (props) => toaster.addToast({ ...props, variant: "success" });
+toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
 toast.warning = (props) => toaster.addToast({ ...props, variant: "warning" });
 toast.credit = (props) => toaster.addToast({ ...props, variant: "credit" });
 toast.debit = (props) => toaster.addToast({ ...props, variant: "debit" });

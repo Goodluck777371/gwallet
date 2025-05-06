@@ -80,9 +80,10 @@ const AdminDashboard = () => {
       
       if (activityError) {
         console.error('Error fetching activity stats:', activityError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch user activity data" 
+          description: "Failed to fetch user activity data",
+          variant: "destructive"
         });
       }
 
@@ -93,9 +94,10 @@ const AdminDashboard = () => {
         
       if (usersError) {
         console.error('Error fetching user count:', usersError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch user data" 
+          description: "Failed to fetch user data",
+          variant: "destructive"
         });
       }
 
@@ -106,9 +108,10 @@ const AdminDashboard = () => {
       
       if (balanceError) {
         console.error('Error fetching balances:', balanceError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch balance data" 
+          description: "Failed to fetch balance data",
+          variant: "destructive"
         });
       }
       
@@ -121,9 +124,10 @@ const AdminDashboard = () => {
         
       if (txError) {
         console.error('Error fetching transaction count:', txError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch transaction data" 
+          description: "Failed to fetch transaction data",
+          variant: "destructive"
         });
       }
 
@@ -135,9 +139,10 @@ const AdminDashboard = () => {
         
       if (stakesError) {
         console.error('Error fetching stakes:', stakesError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch staking data" 
+          description: "Failed to fetch staking data",
+          variant: "destructive"
         });
       }
       
@@ -156,9 +161,10 @@ const AdminDashboard = () => {
         
       if (recentTxError) {
         console.error('Error fetching recent transactions:', recentTxError);
-        toast.error({ 
+        toast({
           title: "Error", 
-          description: "Failed to fetch transaction history" 
+          description: "Failed to fetch transaction history",
+          variant: "destructive"
         });
       }
 
@@ -179,9 +185,10 @@ const AdminDashboard = () => {
 
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-      toast.error({ 
+      toast({
         title: "Error", 
-        description: "Failed to load dashboard statistics" 
+        description: "Failed to load dashboard statistics",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);

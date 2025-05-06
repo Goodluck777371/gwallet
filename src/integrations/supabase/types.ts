@@ -206,6 +206,30 @@ export type Database = {
           },
         ]
       }
+      user_activity: {
+        Row: {
+          action: string
+          id: string
+          ip_address: string | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          ip_address?: string | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          ip_address?: string | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       verify_transaction_pin: {
         Row: {
           created_at: string | null
@@ -259,6 +283,10 @@ export type Database = {
         Args: { currency_code: string; currency_amount: number }
         Returns: string
       }
+      get_admin_session: {
+        Args: { admin_email: string; admin_password: string }
+        Returns: Json
+      }
       get_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -268,6 +296,10 @@ export type Database = {
           username: string
           email: string
         }[]
+      }
+      get_user_activity_stats: {
+        Args: { days?: number }
+        Returns: Json
       }
       process_completed_stakes: {
         Args: Record<PropertyKey, never>

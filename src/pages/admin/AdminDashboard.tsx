@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNumber } from "@/lib/utils";
@@ -21,20 +20,30 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
-  CircleDollarSign
+  CircleDollarSign,
+  UserCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface DashboardStats {
   totalUsers: number;
+  activeUsers: number;
   totalGcoins: number;
   totalTransactions: number;
   activeStakes: number;
   stakedAmount: number;
   dailyTransactions: { date: string; count: number }[];
   transactionsByType: { type: string; count: number }[];
+  recentActivity: {
+    user_id: string;
+    username: string;
+    action: string;
+    timestamp: string;
+    ip_address: string;
+  }[];
 }
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088fe', '#00C49F'];
@@ -43,12 +52,14 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
+    activeUsers: 0,
     totalGcoins: 0,
     totalTransactions: 0,
     activeStakes: 0,
     stakedAmount: 0,
     dailyTransactions: [],
-    transactionsByType: []
+    transactionsByType: [],
+    recentActivity: []
   });
   const [isLoading, setIsLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<'7d' | '14d' | '30d'>('14d');
@@ -61,6 +72,20 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
       
+      // Get user activity stats from our new function
+      const { data: activityStats, error: activityError } = await supabase.rpc(
+        'get_user_activity_stats', 
+        { days: timeframe === '7d' ? 7 : timeframe === '14d' ? 14 : 30 }
+      );
+      
+      if (activityError) {
+        console.error('Error fetching activity stats:', activityError);
+        toast.error({ 
+          title: "Error", 
+          description: "Failed to fetch user activity data" 
+        });
+      }
+
       // Get total users count
       const { count: totalUsers, error: usersError } = await supabase
         .from('profiles')
@@ -142,12 +167,14 @@ const AdminDashboard = () => {
 
       setStats({
         totalUsers: totalUsers || 0,
+        activeUsers: activityStats?.active_users || 0,
         totalGcoins,
         totalTransactions: totalTransactions || 0,
         activeStakes: activeStakes?.length || 0,
         stakedAmount,
         dailyTransactions: dailyData,
-        transactionsByType: typeData
+        transactionsByType: typeData,
+        recentActivity: activityStats?.recent_activity || []
       });
 
     } catch (error) {
@@ -213,25 +240,25 @@ const AdminDashboard = () => {
       iconClass: "bg-blue-100 text-blue-600",
     },
     {
+      title: "Active Users",
+      value: stats.activeUsers,
+      description: "Recent activity",
+      icon: <UserCheck className="h-6 w-6" />,
+      iconClass: "bg-green-100 text-green-600",
+    },
+    {
       title: "Total GCoins",
       value: formatNumber(stats.totalGcoins),
       description: "In circulation",
       icon: <Wallet className="h-6 w-6" />,
-      iconClass: "bg-green-100 text-green-600",
-    },
-    {
-      title: "Total Transactions",
-      value: stats.totalTransactions,
-      description: "All time",
-      icon: <Activity className="h-6 w-6" />,
-      iconClass: "bg-purple-100 text-purple-600",
+      iconClass: "bg-amber-100 text-amber-600",
     },
     {
       title: "Active Stakes",
       value: stats.activeStakes,
       description: `${formatNumber(stats.stakedAmount)} GCoins staked`,
       icon: <TrendingUp className="h-6 w-6" />,
-      iconClass: "bg-amber-100 text-amber-600",
+      iconClass: "bg-purple-100 text-purple-600",
     },
   ];
 
@@ -435,6 +462,54 @@ const AdminDashboard = () => {
             </Card>
           </div>
           
+          {/* User Activity Table */}
+          <Card className="shadow-md border-t-4 border-t-blue-500">
+            <CardHeader>
+              <CardTitle>Recent User Activity</CardTitle>
+              <CardDescription>
+                Latest user logins and logouts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {stats.recentActivity && stats.recentActivity.length > 0 ? (
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>IP Address</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats.recentActivity.map((activity, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{activity.username}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              activity.action === 'login' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {activity.action === 'login' ? 'Login' : 'Logout'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(activity.timestamp).toLocaleString()}</TableCell>
+                          <TableCell>{activity.ip_address || 'Unknown'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No recent activity to display
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md border-t-4 border-t-amber-500">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>

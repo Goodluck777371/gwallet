@@ -1,183 +1,117 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from "@/hooks/use-toast";
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Shield, Loader2, Mail, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Lock, ChevronRight } from "lucide-react";
+import { useAdminAuth } from "@/context/AdminAuthContext";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 
 const AdminLogin = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [password, setPassword] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
-  const [showSecurityQuestion, setShowSecurityQuestion] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { adminLogin, adminUser } = useAdminAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  // If already logged in, redirect to dashboard
+  if (adminUser) {
+    navigate("/admin/dashboard");
+    return null;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    setTimeout(() => {
-      if (password === 'DeadAdmin') {
-        setShowSecurityQuestion(true);
-      } else {
-        toast({
-          title: 'Access Denied',
-          description: 'Incorrect administrator password.',
-          variant: "destructive"
-        });
-      }
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleSecurityQuestionSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    // Check if the answer is "cat" (case insensitive)
-    if (securityAnswer.toLowerCase() === 'cat') {
-      // Display welcome message
-      toast({
-        title: "Welcome Big Daddy",
-        description: 'You are now logged in as administrator.',
-        variant: "success"
+    
+    if (!email || !password) {
+      toast.warning({
+        title: "Missing Information",
+        description: "Please enter both email and password."
       });
-      
-      // Store admin auth in session storage
-      sessionStorage.setItem('gwallet_admin_auth', 'true');
-      
-      // Navigate to admin dashboard (with a slight delay to show the message)
-      setTimeout(() => {
-        navigate('/Noadminneeded/dashboard');
-      }, 800);
-    } else {
-      toast({
-        title: 'Security Check Failed',
-        description: 'Incorrect security answer.',
-        variant: "destructive"
-      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await adminLogin(email, password);
+      navigate("/admin/dashboard");
+    } catch (error) {
+      // Error is already handled in adminLogin function
+      console.error("Admin login form error:", error);
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <AnimatePresence mode="wait">
-        {!showSecurityQuestion ? (
-          <motion.div
-            key="password"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
-          >
-            <div className="bg-black p-8 rounded-lg border border-gray-800 shadow-xl">
-              <div className="flex flex-col items-center mb-8">
-                <div className="bg-white/10 p-3 rounded-full mb-4">
-                  <Lock className="h-8 w-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-white">Administrator Access</h2>
-                <p className="text-gray-400 text-center mt-2">
-                  Restricted area. Authorized personnel only.
-                </p>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-6">
+      <Card className="w-full max-w-md bg-white/5 backdrop-blur-sm border border-white/10 shadow-2xl">
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-2">
+            <Shield className="h-8 w-8 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-white">Admin Login</CardTitle>
+          <CardDescription className="text-gray-300">
+            Enter your credentials to access the admin dashboard
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-300">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
+                  disabled={isLoading}
+                />
               </div>
-
-              <form onSubmit={handlePasswordSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-                      Administrator Password
-                    </label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter administrator password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading || !password}
-                    className="w-full bg-white hover:bg-gray-200 text-black"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-black border-t-transparent rounded-full" />
-                        Verifying...
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        Continue <ChevronRight className="ml-2 h-4 w-4" />
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </form>
             </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="securityQuestion"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
-          >
-            <div className="bg-black p-8 rounded-lg border border-gray-800 shadow-xl">
-              <div className="flex flex-col items-center mb-8">
-                <div className="bg-white/10 p-3 rounded-full mb-4">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-white">Security Question</h2>
-                <p className="text-gray-400 text-center mt-2">
-                  What's the plan of GWallet?
-                </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-gray-300">Password</Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
+                  disabled={isLoading}
+                />
               </div>
-
-              <form onSubmit={handleSecurityQuestionSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <Input
-                      type="text"
-                      placeholder="Your answer"
-                      value={securityAnswer}
-                      onChange={(e) => setSecurityAnswer(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading || !securityAnswer}
-                    className="w-full bg-white hover:bg-gray-200 text-black"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-black border-t-transparent rounded-full" />
-                        Verifying...
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        Authenticate <ChevronRight className="ml-2 h-4 w-4" />
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </form>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                "Login to Dashboard"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="text-center border-t border-white/10 text-gray-400 text-xs">
+          <p className="w-full">GWallet Admin • Protected Area • {new Date().getFullYear()}</p>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

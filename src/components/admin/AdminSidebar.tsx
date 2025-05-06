@@ -20,70 +20,69 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAdminAuth } from "@/context/AdminAuthContext";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(false);
+  const { adminLogout } = useAdminAuth();
 
-  const handleLogout = () => {
-    // Clear admin auth from session storage
-    sessionStorage.removeItem('gwallet_admin_auth');
-    toast({
-      title: "Logged Out",
-      description: "You have been logged out of the administrator panel.",
-    });
-    
-    // Redirect to admin login
-    navigate('/Noadminneeded');
+  const handleLogout = async () => {
+    try {
+      await adminLogout();
+      navigate('/admin');
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const navItems = [
     { 
       label: "Dashboard", 
       icon: <Home className="h-5 w-5" />,
-      path: "/Noadminneeded/dashboard" 
+      path: "/admin/dashboard" 
     },
     { 
       label: "Users", 
       icon: <Users className="h-5 w-5" />,
-      path: "/Noadminneeded/users" 
+      path: "/admin/users" 
     },
     { 
       label: "Transactions", 
       icon: <Activity className="h-5 w-5" />,
-      path: "/Noadminneeded/transactions" 
+      path: "/admin/transactions" 
     },
     { 
       label: "Staking", 
       icon: <TrendingUp className="h-5 w-5 text-green-400" />,
-      path: "/Noadminneeded/staking" 
+      path: "/admin/staking" 
     },
     { 
       label: "Exchange", 
       icon: <RefreshCw className="h-5 w-5 text-blue-400" />,
-      path: "/Noadminneeded/exchange" 
+      path: "/admin/exchange" 
     },
     { 
       label: "GCoin Supply", 
       icon: <CircleDollarSign className="h-5 w-5 text-amber-400" />,
-      path: "/Noadminneeded/supply" 
+      path: "/admin/supply" 
     },
     { 
       label: "Reports", 
       icon: <FileText className="h-5 w-5" />,
-      path: "/Noadminneeded/reports" 
+      path: "/admin/reports" 
     },
     { 
       label: "Database", 
       icon: <Database className="h-5 w-5" />,
-      path: "/Noadminneeded/database" 
+      path: "/admin/database" 
     },
     { 
       label: "Settings", 
       icon: <Settings className="h-5 w-5" />,
-      path: "/Noadminneeded/settings" 
+      path: "/admin/settings" 
     }
   ];
 

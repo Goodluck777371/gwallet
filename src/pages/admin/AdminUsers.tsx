@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Loader2 } from "lucide-react";
+import { Edit, Trash2, Loader2, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +35,9 @@ interface User {
 }
 
 const AdminUsers = () => {
-  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -49,6 +49,7 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching users...");
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -58,7 +59,7 @@ const AdminUsers = () => {
         console.error("Error fetching users:", error);
         toast.error({
           title: "Error",
-          description: "Failed to load users",
+          description: "Failed to load users"
         });
         return;
       }
@@ -69,7 +70,7 @@ const AdminUsers = () => {
       console.error("Error fetching users:", error);
       toast.error({
         title: "Error",
-        description: "Failed to load users",
+        description: "Failed to load users"
       });
     } finally {
       setIsLoading(false);
@@ -84,7 +85,7 @@ const AdminUsers = () => {
   const confirmDeleteUser = async () => {
     if (!deleteUserId) return;
 
-    setIsLoading(true);
+    setIsProcessing(true);
     try {
       const { error } = await supabase.from("profiles").delete().eq("id", deleteUserId);
 
@@ -92,7 +93,7 @@ const AdminUsers = () => {
         console.error("Error deleting user:", error);
         toast.error({
           title: "Error",
-          description: "Failed to delete user",
+          description: "Failed to delete user"
         });
         return;
       }
@@ -100,18 +101,18 @@ const AdminUsers = () => {
       setUsers((prevUsers) => prevUsers.filter((user) => user.id !== deleteUserId));
       toast.success({
         title: "User Deleted",
-        description: "User has been successfully deleted",
+        description: "User has been successfully deleted"
       });
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error({
         title: "Error",
-        description: "Failed to delete user",
+        description: "Failed to delete user"
       });
     } finally {
       setIsDeleteDialogOpen(false);
       setDeleteUserId(null);
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -146,7 +147,15 @@ const AdminUsers = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline"
+            size="icon"
+            onClick={fetchUsers}
+            title="Refresh users list"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <p className="font-medium">Total Users: {users.length}</p>
         </div>
       </div>
@@ -215,11 +224,22 @@ const AdminUsers = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)} disabled={isProcessing}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteUser} disabled={isLoading}>
-              {isLoading ? "Deleting..." : "Delete"}
+            <AlertDialogAction 
+              onClick={confirmDeleteUser} 
+              disabled={isProcessing} 
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

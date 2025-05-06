@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { TrendingUp, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 export interface StakingPosition {
   id: string;
@@ -38,9 +38,9 @@ export interface StakingPosition {
 
 const AdminStaking = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [stakings, setStakings] = useState<StakingPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [unstakeDialog, setUnstakeDialog] = useState<{ open: boolean, position: StakingPosition | null }>({
     open: false,
     position: null
@@ -53,6 +53,7 @@ const AdminStaking = () => {
   const fetchStakings = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching all staking positions...");
       
       // Fetch all staking positions for admin view
       const { data, error } = await supabase
@@ -60,14 +61,18 @@ const AdminStaking = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching stakings:", error);
+        throw error;
+      }
       
+      console.log("Fetched staking positions:", data);
       setStakings(data || []);
     } catch (error) {
       console.error('Error fetching staking positions:', error);
       toast.error({
         title: "Error",
-        description: "Failed to load staking history",
+        description: "Failed to load staking history"
       });
     } finally {
       setIsLoading(false);
@@ -98,59 +103,79 @@ const AdminStaking = () => {
 
   const confirmUnstake = async () => {
     if (!unstakeDialog.position) return;
-    setIsLoading(true);
+    setIsProcessing(true);
     
     try {
-      const { error } = await supabase.rpc('unstake_gcoin', {
+      console.log("Admin unstaking position:", unstakeDialog.position.id);
+      
+      const { data, error } = await supabase.rpc('unstake_gcoin', {
         staking_id: unstakeDialog.position.id
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Admin unstake error:", error);
+        throw error;
+      }
+      
+      console.log("Admin unstake successful:", data);
       
       toast.credit({
         title: "Unstaking Successful",
-        description: "GCoins have been returned to user's wallet",
+        description: "GCoins have been returned to user's wallet"
       });
       
       // Refresh staking positions
       fetchStakings();
     } catch (error: any) {
+      console.error("Admin unstake error:", error);
       toast.error({
         title: "Unstaking Failed",
-        description: error.message || "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred"
       });
     } finally {
       setUnstakeDialog({ open: false, position: null });
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const handleProcessCompletedStakes = async () => {
-    setIsLoading(true);
+    setIsProcessing(true);
     try {
-      const { error } = await supabase.rpc('process_completed_stakes');
+      console.log("Processing all completed stakes...");
       
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('process_completed_stakes');
+      
+      if (error) {
+        console.error("Process completed stakes error:", error);
+        throw error;
+      }
+      
+      console.log("Processed completed stakes:", data);
       
       toast.success({
         title: "Success",
-        description: "Completed stakes have been processed successfully",
+        description: "Completed stakes have been processed successfully"
       });
       
       // Refresh staking positions
       fetchStakings();
     } catch (error: any) {
+      console.error("Process completed stakes error:", error);
       toast.error({
         title: "Processing Failed",
-        description: error.message || "Failed to process completed stakes",
+        description: error.message || "Failed to process completed stakes"
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const canUnstake = (position: StakingPosition) => {
     return position.status === 'active';
+  };
+  
+  const isStakeCompleted = (position: StakingPosition) => {
+    return new Date(position.end_date) <= new Date() && position.status === 'active';
   };
 
   return (
@@ -159,13 +184,28 @@ const AdminStaking = () => {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Staking Positions
         </h1>
-        <Button 
-          onClick={handleProcessCompletedStakes}
-          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-        >
-          <TrendingUp className="mr-2 h-4 w-4" />
-          Process Completed Stakes
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline"
+            size="icon"
+            onClick={fetchStakings}
+            disabled={isProcessing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button 
+            onClick={handleProcessCompletedStakes}
+            disabled={isProcessing}
+            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+          >
+            {isProcessing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <TrendingUp className="mr-2 h-4 w-4" />
+            )}
+            Process Completed Stakes
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -188,7 +228,7 @@ const AdminStaking = () => {
           </TableHeader>
           <TableBody>
             {stakings.map((position) => (
-              <TableRow key={position.id}>
+              <TableRow key={position.id} className={isStakeCompleted(position) ? "bg-amber-50" : ""}>
                 <TableCell className="font-mono text-xs truncate">{position.user_id}</TableCell>
                 <TableCell>{formatDate(position.start_date)}</TableCell>
                 <TableCell>{formatDate(position.end_date)}</TableCell>
@@ -197,17 +237,35 @@ const AdminStaking = () => {
                 <TableCell className="text-green-600">+{position.estimated_reward.toFixed(2)} GCoin</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-md text-xs font-medium ${getStatusClassName(position.status)}`}>
-                    {position.status.charAt(0).toUpperCase() + position.status.slice(1)}
+                    {isStakeCompleted(position) ? (
+                      <span className="flex items-center gap-1">
+                        Ready for collection
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                      </span>
+                    ) : (
+                      position.status.charAt(0).toUpperCase() + position.status.slice(1)
+                    )}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
                   {canUnstake(position) ? (
                     <Button
-                      variant="outline"
+                      variant={isStakeCompleted(position) ? "default" : "outline"}
                       size="sm"
+                      disabled={isProcessing}
+                      className={isStakeCompleted(position) ? "bg-green-600 hover:bg-green-700" : ""}
                       onClick={() => handleUnstakeRequest(position)}
                     >
-                      Unstake
+                      {isProcessing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isStakeCompleted(position) ? (
+                        "Process Rewards"
+                      ) : (
+                        "Unstake"
+                      )}
                     </Button>
                   ) : (
                     <span className="text-sm text-gray-400">-</span>
@@ -269,9 +327,20 @@ const AdminStaking = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmUnstake} className="bg-red-500 hover:bg-red-600">
-              Proceed
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmUnstake} 
+              disabled={isProcessing}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                "Proceed"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

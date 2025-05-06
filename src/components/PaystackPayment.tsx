@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/utils';
@@ -32,7 +32,6 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   onClose
 }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
@@ -41,7 +40,17 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     const script = document.createElement('script');
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
-    script.onload = () => setScriptLoaded(true);
+    script.onload = () => {
+      console.log("Paystack script loaded successfully");
+      setScriptLoaded(true);
+    };
+    script.onerror = () => {
+      console.error("Failed to load Paystack script");
+      toast.error({
+        title: "Payment Error",
+        description: "Could not load payment system. Please try again later."
+      });
+    };
     document.body.appendChild(script);
     
     return () => {
@@ -51,13 +60,20 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
 
   const updateUserBalance = async (reference: string) => {
     try {
+      console.log("Updating user balance with reference:", reference);
+      
       // Call a Supabase function to update the user's balance
       const { data, error } = await supabase.rpc('buy_gcoin', {
         currency_code: 'NGN',
         currency_amount: amount
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating balance:", error);
+        throw error;
+      }
+      
+      console.log("Balance updated successfully:", data);
       
       // Refresh the user data to get updated balance
       await supabase.auth.refreshSession();
@@ -78,6 +94,8 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
         throw new Error("Paystack SDK not loaded");
       }
 
+      console.log("Initializing Paystack payment");
+      
       // Generate a reference
       const reference = 'GCoin_' + Math.floor(Math.random() * 1000000000 + 1) + '_' + new Date().getTime();
       
@@ -108,6 +126,8 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           ]
         },
         callback: async function(response: any) {
+          console.log("Payment successful:", response);
+          
           // This happens after the payment is completed successfully
           const transactionReference = response.reference;
           
@@ -116,26 +136,26 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           
           if (balanceUpdated) {
             // Show success toast
-            toast({
+            toast.credit({
               title: "Payment Successful",
-              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`,
-              variant: "credit"
+              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`
             });
             
             // Call the onSuccess callback
             onSuccess();
           } else {
-            toast({
+            toast.error({
               title: "Transaction Error",
-              description: "Payment was successful but there was an error updating your balance. Please contact support.",
-              variant: "destructive"
+              description: "Payment was successful but there was an error updating your balance. Please contact support."
             });
           }
           setIsLoading(false);
         },
         onClose: function() {
+          console.log("Payment window closed");
+          
           // User closed the payment window
-          toast({
+          toast.toast({
             title: "Payment Cancelled",
             description: "You have cancelled the payment."
           });
@@ -148,10 +168,9 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       handler.openIframe();
     } catch (error) {
       console.error('Paystack payment initialization error:', error);
-      toast({
+      toast.error({
         title: "Payment Error",
-        description: "Could not initialize payment. Please try again later.",
-        variant: "destructive"
+        description: "Could not initialize payment. Please try again later."
       });
       setIsLoading(false);
     }

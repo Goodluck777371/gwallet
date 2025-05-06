@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 }) => {
   const [scanning, setScanning] = useState(false);
   const [hasCamera, setHasCamera] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -21,11 +23,13 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     // Check if camera is available
     Html5Qrcode.getCameras()
       .then(devices => {
+        console.log("Available cameras:", devices);
         setHasCamera(devices.length > 0);
       })
       .catch(err => {
         console.error('Error checking for cameras:', err);
         setHasCamera(false);
+        setScannerError("Failed to detect cameras. Please check permissions.");
       });
     
     // Cleanup scanner when component unmounts
@@ -38,6 +42,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 
   const startScanner = () => {
     if (!containerRef.current) return;
+    setScannerError(null);
     
     const scannerId = "qr-scanner";
     // Create scanner element if it doesn't exist
@@ -47,50 +52,87 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       containerRef.current.appendChild(scannerDiv);
     }
     
-    const scanner = new Html5Qrcode(scannerId);
-    scannerRef.current = scanner;
-    
-    setScanning(true);
-    
-    const qrCodeSuccessCallback = (decodedText: string) => {
-      // Stop scanning
-      scanner.stop().then(() => {
-        setScanning(false);
+    try {
+      const scanner = new Html5Qrcode(scannerId);
+      scannerRef.current = scanner;
+      
+      setScanning(true);
+      
+      const qrCodeSuccessCallback = (decodedText: string) => {
+        console.log("QR code detected:", decodedText);
         
-        // Check if the scanned text is a valid wallet address
-        // This is just a basic check, you might want to add more validation
-        if (decodedText.startsWith('gCoin')) {
-          onCodeDetected(decodedText);
-        } else {
-          toast.error({
-            title: "Invalid QR Code",
-            description: "The scanned QR code does not contain a valid wallet address.",
+        // Stop scanning
+        scanner.stop().then(() => {
+          setScanning(false);
+          
+          // Valid wallet addresses start with 'gCoin'
+          if (decodedText.startsWith('gCoin')) {
+            onCodeDetected(decodedText);
+          } else {
+            toast.error({
+              title: "Invalid QR Code",
+              description: "The scanned QR code does not contain a valid wallet address.",
+            });
+          }
+        }).catch(error => {
+          console.error('Error stopping scanner:', error);
+        });
+      };
+      
+      const qrCodeErrorCallback = (errorMessage: string) => {
+        console.error("QR scanning error:", errorMessage);
+      };
+      
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      };
+      
+      // First, check if any cameras are available
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length > 0) {
+          const cameraId = devices[0].id;
+          console.log("Using camera:", cameraId);
+          
+          // Start scanning
+          scanner.start(
+            { deviceId: cameraId },
+            config,
+            qrCodeSuccessCallback,
+            qrCodeErrorCallback
+          ).catch((error) => {
+            console.error('Error starting scanner with device ID:', error);
+            
+            // If deviceId approach fails, try with facingMode
+            scanner.start(
+              { facingMode: "environment" },
+              config,
+              qrCodeSuccessCallback,
+              qrCodeErrorCallback
+            ).catch((error2) => {
+              console.error('Error starting scanner with facingMode:', error2);
+              setScanning(false);
+              setScannerError("Could not access camera. Please check permissions and try again.");
+              toast.error({
+                title: "Scanner Error",
+                description: "Could not start the scanner. Please make sure camera permissions are granted.",
+              });
+            });
           });
+        } else {
+          setScannerError("No cameras found on your device.");
+          setScanning(false);
         }
-      }).catch(error => {
-        console.error('Error stopping scanner:', error);
+      }).catch(err => {
+        console.error("Error getting cameras", err);
+        setScannerError("Error accessing camera. Please check permissions.");
+        setScanning(false);
       });
-    };
-    
-    const config = {
-      fps: 10,
-      aspectRatio: 1,
-      qrbox: { width: 250, height: 250 },
-    };
-    
-    scanner.start(
-      { facingMode: "environment" },
-      config,
-      qrCodeSuccessCallback,
-      undefined
-    ).catch((error) => {
-      console.error('Error starting scanner:', error);
+    } catch (error) {
+      console.error("Error initializing scanner:", error);
+      setScannerError("Failed to initialize the QR scanner.");
       setScanning(false);
-      toast.error({
-        title: "Scanner Error",
-        description: "Could not start the scanner. Please make sure camera permissions are granted.",
-      });
-    });
+    }
   };
   
   const stopScanner = () => {
@@ -132,6 +174,13 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
             <p className="text-sm text-gray-500 mb-2">
               Scan a QR code to get a wallet address
             </p>
+          </div>
+        )}
+        
+        {scannerError && (
+          <div className="text-center p-4 bg-red-50 border border-red-100 rounded-lg">
+            <p className="text-red-500 font-medium mb-2">Scanner Error</p>
+            <p className="text-gray-600 text-sm">{scannerError}</p>
           </div>
         )}
         

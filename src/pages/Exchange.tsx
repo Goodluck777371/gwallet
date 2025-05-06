@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, AlertCircle } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 const Exchange = () => {
   const { user } = useAuth();
@@ -61,6 +61,7 @@ const Exchange = () => {
         toast({
           title: "Error",
           description: "Failed to fetch exchange rate.",
+          variant: "destructive"
         });
         setExchangeRate(null);
       } finally {
@@ -69,7 +70,7 @@ const Exchange = () => {
     };
 
     fetchExchangeRate();
-  }, [fromCurrency, toCurrency, toast]);
+  }, [fromCurrency, toCurrency]);
 
   useEffect(() => {
     if (amount && exchangeRate !== null) {
@@ -89,6 +90,7 @@ const Exchange = () => {
       toast({
         title: "Error",
         description: "You must be logged in to perform this action.",
+        variant: "destructive"
       });
       return;
     }
@@ -97,6 +99,7 @@ const Exchange = () => {
       toast({
         title: "Error",
         description: "Please enter a valid amount.",
+        variant: "destructive"
       });
       return;
     }
@@ -116,6 +119,7 @@ const Exchange = () => {
       toast({
         title: "Exchange Successful",
         description: `${amount} ${fromCurrency} has been exchanged to ${convertedAmount?.toFixed(2)} ${toCurrency}.`,
+        variant: "success"
       });
 
       // Reset form
@@ -127,6 +131,7 @@ const Exchange = () => {
       toast({
         title: "Exchange Failed",
         description: "There was an error processing your exchange. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);

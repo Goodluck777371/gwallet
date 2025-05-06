@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/utils';
@@ -116,17 +116,19 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           
           if (balanceUpdated) {
             // Show success toast
-            toast.credit({
+            toast({
               title: "Payment Successful",
-              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`
+              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`,
+              variant: "credit"
             });
             
             // Call the onSuccess callback
             onSuccess();
           } else {
-            toast.error({
+            toast({
               title: "Transaction Error",
-              description: "Payment was successful but there was an error updating your balance. Please contact support."
+              description: "Payment was successful but there was an error updating your balance. Please contact support.",
+              variant: "destructive"
             });
           }
           setIsLoading(false);
@@ -146,9 +148,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       handler.openIframe();
     } catch (error) {
       console.error('Paystack payment initialization error:', error);
-      toast.error({
+      toast({
         title: "Payment Error",
-        description: "Could not initialize payment. Please try again later."
+        description: "Could not initialize payment. Please try again later.",
+        variant: "destructive"
       });
       setIsLoading(false);
     }

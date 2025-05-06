@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   ArrowDownLeft, 
@@ -9,7 +8,7 @@ import {
   CheckCircle2,
   Receipt
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { formatNumber } from "@/lib/utils";
 import TransactionReceipt from "./TransactionReceipt";
@@ -127,9 +126,10 @@ const TransactionItem = ({ transaction, className = "" }: TransactionItemProps) 
   const copyTransactionId = () => {
     navigator.clipboard.writeText(id);
     setCopied(true);
-    toast.success({
+    toast({
       title: "Transaction ID copied",
-      description: "Transaction ID has been copied to clipboard"
+      description: "Transaction ID has been copied to clipboard",
+      variant: "success"
     });
     
     setTimeout(() => {

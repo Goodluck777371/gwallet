@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,9 +74,10 @@ const StakingHistory = () => {
         setStakings(data || []);
       } catch (error) {
         console.error('Error fetching staking positions:', error);
-        toast.error({
+        toast({
           title: "Error",
-          description: "Failed to load staking history"
+          description: "Failed to load staking history",
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);
@@ -141,14 +141,16 @@ const StakingHistory = () => {
       
       if (error) throw error;
       
-      toast.credit({
+      toast({
         title: "Unstaking Successful",
-        description: "Your GCoins have been returned to your wallet"
+        description: "Your GCoins have been returned to your wallet",
+        variant: "credit"
       });
     } catch (error: any) {
-      toast.error({
+      toast({
         title: "Unstaking Failed",
-        description: error.message || "An unexpected error occurred"
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
       });
     } finally {
       setUnstakeDialog({ open: false, position: null });
@@ -175,14 +177,16 @@ const StakingHistory = () => {
         
         if (error) throw error;
         
-        toast.success({
+        toast({
           title: "Stake Completed",
-          description: `Your stake of ${position.amount} GCoins has been returned with ${position.estimated_reward} GCoins reward`
+          description: `Your stake of ${position.amount} GCoins has been returned with ${position.estimated_reward} GCoins reward`,
+          variant: "success"
         });
       } catch (error: any) {
-        toast.error({
+        toast({
           title: "Error Processing Stake",
-          description: error.message || "Failed to process completed stake"
+          description: error.message || "Failed to process completed stake",
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);

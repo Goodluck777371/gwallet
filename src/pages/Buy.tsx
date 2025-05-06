@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -65,9 +64,10 @@ const Buy = () => {
   const handleBuyClick = () => {
     // Validate input
     if (!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0) {
-      toast.error({
+      toast({
         title: "Invalid amount",
-        description: "Please enter a valid amount to proceed."
+        description: "Please enter a valid amount to proceed.",
+        variant: "destructive"
       });
       return;
     }

@@ -65,7 +65,7 @@ export const toaster = {
   },
 };
 
-// Properly define the toast function interface with all variants
+// Define the toast function interface with all variants
 export interface ToastFunctions {
   (props: Omit<ToasterToast, "id">): string;
   toast: (props: Omit<ToasterToast, "id">) => string;
@@ -90,9 +90,10 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
     };
   }, []);
   
-  // Create the main toast function with all the method properties
+  // Create the main toast function
   const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as ToastFunctions;
   
+  // Add variant methods
   toast.toast = (props) => toaster.addToast(props);
   toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
   toast.success = (props) => toaster.addToast({ ...props, variant: "success" });
@@ -110,6 +111,7 @@ export function useToast(): { toasts: ToasterToast[] } & ToastFunctions {
 // Create a singleton instance with proper type definitions
 const toast = ((props: Omit<ToasterToast, "id">) => toaster.addToast(props)) as ToastFunctions;
 
+// Add variant methods to the singleton
 toast.toast = (props) => toaster.addToast(props);
 toast.error = (props) => toaster.addToast({ ...props, variant: "destructive" });
 toast.success = (props) => toaster.addToast({ ...props, variant: "success" });

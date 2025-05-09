@@ -68,12 +68,12 @@ export const toaster = {
 // Define the toast function interface with all variants
 export interface ToastFunctions {
   (props: Omit<ToasterToast, "id">): string;
-  success: (props: Omit<ToasterToast, "id">) => string;
-  error: (props: Omit<ToasterToast, "id">) => string;
-  warning: (props: Omit<ToasterToast, "id">) => string;
+  success: (props: Omit<ToasterToast, "id" | "variant">) => string;
+  error: (props: Omit<ToasterToast, "id" | "variant">) => string;
+  warning: (props: Omit<ToasterToast, "id" | "variant">) => string;
   toast: (props: Omit<ToasterToast, "id">) => string;
-  credit: (props: Omit<ToasterToast, "id">) => string;
-  debit: (props: Omit<ToasterToast, "id">) => string;
+  credit: (props: Omit<ToasterToast, "id" | "variant">) => string;
+  debit: (props: Omit<ToasterToast, "id" | "variant">) => string;
   dismiss: (toastId: string) => void;
 }
 

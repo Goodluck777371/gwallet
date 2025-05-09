@@ -1,12 +1,14 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode, DollarSign } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Copy, CheckCircle2, QrCode, DollarSign, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { formatNumber } from "@/lib/utils";
 import QrCodeScanner from "./QrCodeScanner";
+import MultiCurrencyWallet from "./MultiCurrencyWallet";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +26,7 @@ const WalletCard = ({ className }: WalletCardProps) => {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showMultiCurrency, setShowMultiCurrency] = useState(false);
   const { user } = useAuth();
   
   const walletAddress = user?.wallet_address || '';
@@ -83,34 +86,49 @@ const WalletCard = ({ className }: WalletCardProps) => {
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-medium text-gray-500">Your Balance</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setShowBalance(!showBalance)}
-            aria-label={showBalance ? "Hide balance" : "Show balance"}
-          >
-            {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowMultiCurrency(!showMultiCurrency)}
+              aria-label="Toggle multi-currency view"
+            >
+              <Activity className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowBalance(!showBalance)}
+              aria-label={showBalance ? "Hide balance" : "Show balance"}
+            >
+              {showBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         
-        <div className="mb-4">
-          {showBalance ? (
-            <div>
-              <div className="flex items-baseline">
-                <span className="text-3xl font-bold">{formattedBalance}</span>
-                <span className="ml-2 text-lg font-medium text-gcoin-blue">GCoin</span>
+        {showMultiCurrency ? (
+          <MultiCurrencyWallet className="mb-4" />
+        ) : (
+          <div className="mb-4">
+            {showBalance ? (
+              <div>
+                <div className="flex items-baseline">
+                  <span className="text-3xl font-bold">{formattedBalance}</span>
+                  <span className="ml-2 text-lg font-medium text-gcoin-blue">GCoin</span>
+                </div>
+                <div className="mt-1 text-sm text-gray-500">
+                  ≈ {formattedNairaEquivalent}
+                </div>
               </div>
-              <div className="mt-1 text-sm text-gray-500">
-                ≈ {formattedNairaEquivalent}
+            ) : (
+              <div className="h-12 flex items-center">
+                <span className="text-2xl">•••••••</span>
               </div>
-            </div>
-          ) : (
-            <div className="h-12 flex items-center">
-              <span className="text-2xl">•••••••</span>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
         
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
@@ -231,10 +249,30 @@ const WalletCard = ({ className }: WalletCardProps) => {
           </Dialog>
         </div>
 
-        <div className="mt-4">
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <Link to="/exchange" className="col-span-1">
+            <Button 
+              variant="outline" 
+              className="w-full flex items-center justify-center"
+            >
+              <ArrowDownLeft className="h-4 w-4 mr-2" />
+              <span>Exchange</span>
+            </Button>
+          </Link>
+
+          <Link to="/airdrop" className="col-span-1">
+            <Button 
+              variant="outline" 
+              className="w-full flex items-center justify-center"
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              <span>Mining & Airdrops</span>
+            </Button>
+          </Link>
+
           <Button 
             variant="outline" 
-            className="w-full flex items-center justify-center"
+            className="w-full flex items-center justify-center col-span-2"
             onClick={() => setShowScanner(true)}
           >
             <QrCode className="h-4 w-4 mr-2" />

@@ -19,6 +19,7 @@ import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import AdminLogin from "@/pages/AdminLogin";
+import Airdrop from "@/pages/Airdrop";
 
 // Admin Pages
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -50,6 +51,7 @@ function App() {
             <Route path="/stake" element={<Stake />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/airdrop" element={<Airdrop />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>

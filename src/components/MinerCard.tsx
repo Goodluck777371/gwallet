@@ -32,60 +32,62 @@ const MinerCard: React.FC<MinerProps> = ({
   const dailyRate = hourlyRate * 24;
   
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{miner.name}</CardTitle>
+          <CardTitle className="text-base md:text-lg leading-tight">{miner.name}</CardTitle>
           {miner.owned ? (
-            <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Owned</Badge>
+            <Badge className="bg-green-100 text-green-800 hover:bg-green-200 text-xs flex-shrink-0">Owned</Badge>
           ) : miner.price === 0 ? (
-            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">Free</Badge>
+            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs flex-shrink-0">Free</Badge>
           ) : (
-            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200">
+            <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-200 text-xs flex-shrink-0">
               {formatNumber(miner.price)} GCoin
             </Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-grow">
         <div className="relative h-32 w-full bg-gray-100 rounded-md overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img 
-              src={miner.image || "/placeholder.svg"} 
-              alt={miner.name}
-              className="h-24 w-24 object-contain animate-bounce"
-              style={{ animationDuration: '2s' }}
-            />
-          </div>
+          <img 
+            src={miner.image} 
+            alt={miner.name}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/placeholder.svg";
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         </div>
         
         <div>
-          <p className="text-sm text-gray-500">{miner.description}</p>
+          <p className="text-sm text-gray-500 leading-relaxed">{miner.description}</p>
         </div>
         
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="bg-gray-50 p-2 rounded">
-            <div className="text-gray-500">Mining duration</div>
+            <div className="text-gray-500 text-xs">Mining duration</div>
             <div className="font-semibold">{miner.hours} hours</div>
           </div>
           
           <div className="bg-gray-50 p-2 rounded">
-            <div className="text-gray-500">Rate per hour</div>
-            <div className="font-semibold">{formatNumber(hourlyRate)} GCoin</div>
+            <div className="text-gray-500 text-xs">Rate per hour</div>
+            <div className="font-semibold text-xs">{formatNumber(hourlyRate)} GCoin</div>
           </div>
           
           <div className="bg-gray-50 p-2 rounded col-span-2">
-            <div className="text-gray-500">Potential daily earnings</div>
-            <div className="font-semibold text-gcoin-blue">{formatNumber(dailyRate)} GCoin</div>
+            <div className="text-gray-500 text-xs">Potential daily earnings</div>
+            <div className="font-semibold text-gcoin-blue text-sm">{formatNumber(dailyRate)} GCoin</div>
           </div>
         </div>
       </CardContent>
       
-      <CardFooter className="flex gap-2">
+      <CardFooter className="flex gap-2 pt-4 flex-shrink-0">
         {miner.owned || miner.price === 0 ? (
           <Button 
             onClick={onStartMining}
-            className="w-full bg-gcoin-blue hover:bg-gcoin-blue/90"
+            className="w-full bg-gcoin-blue hover:bg-gcoin-blue/90 text-sm"
             disabled={disabled}
           >
             Start Mining
@@ -93,7 +95,7 @@ const MinerCard: React.FC<MinerProps> = ({
         ) : (
           <Button 
             onClick={onPurchase}
-            className="w-full bg-purple-600 hover:bg-purple-700"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-sm"
             disabled={disabled}
           >
             Buy Miner

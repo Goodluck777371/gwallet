@@ -34,7 +34,7 @@ interface MiningSession {
 }
 
 const Airdrop = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [miners, setMiners] = useState<Miner[]>([]);
   const [ownedMiners, setOwnedMiners] = useState<string[]>([]);
@@ -47,7 +47,7 @@ const Airdrop = () => {
       id: "free-miner",
       name: "Free Miner",
       description: "Start your mining journey with our basic miner",
-      image: "/miners/free-miner.png",
+      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
       hours: 6,
       ratePerSecond: 0.2,
       price: 0,
@@ -57,7 +57,7 @@ const Airdrop = () => {
       id: "epic-miner",
       name: "Epic Miner",
       description: "Advanced mining equipment for serious miners",
-      image: "/miners/epic-miner.png",
+      image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400&h=300&fit=crop",
       hours: 6,
       ratePerSecond: 0.002,
       price: 1000,
@@ -67,7 +67,7 @@ const Airdrop = () => {
       id: "super-miner",
       name: "Super Miner",
       description: "High-performance mining with excellent returns",
-      image: "/miners/super-miner.png",
+      image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop",
       hours: 6,
       ratePerSecond: 0.2,
       price: 500000,
@@ -77,7 +77,7 @@ const Airdrop = () => {
       id: "legendary-miner",
       name: "Legendary Miner",
       description: "The ultimate mining machine for maximum profits",
-      image: "/miners/legendary-miner.png",
+      image: "https://images.unsplash.com/photo-1487887235947-a955ef187fcc?w=400&h=300&fit=crop",
       hours: 6,
       ratePerSecond: 1,
       price: 1000000,
@@ -153,17 +153,18 @@ const Airdrop = () => {
 
       if (error) throw error;
 
-      toast.success({
+      toast({
         title: "Mining Started! ⛏️",
-        description: `${miner.name} is now mining GCoins for ${miner.hours} hours.`
+        description: `${miner.name} is now mining GCoins for ${miner.hours} hours.`,
       });
 
       fetchActiveSessions();
     } catch (error) {
       console.error('Error starting mining:', error);
-      toast.error({
+      toast({
         title: "Mining Failed",
-        description: "Failed to start mining session. Please try again."
+        description: "Failed to start mining session. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -207,17 +208,19 @@ const Airdrop = () => {
 
       if (rewardError) throw rewardError;
 
-      toast.credit({
+      toast({
         title: "Rewards Claimed! 🎉",
-        description: `You earned ${formatNumber(amountToCredit)} GCoins from mining.`
+        description: `You earned ${formatNumber(amountToCredit)} GCoins from mining.`,
       });
 
       fetchActiveSessions();
+      refreshProfile(); // Refresh user balance
     } catch (error) {
       console.error('Error claiming rewards:', error);
-      toast.error({
+      toast({
         title: "Claim Failed",
-        description: "Failed to claim mining rewards. Please try again."
+        description: "Failed to claim mining rewards. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -236,17 +239,19 @@ const Airdrop = () => {
 
       if (error) throw error;
 
-      toast.success({
+      toast({
         title: "Miner Purchased! 🎉",
-        description: `You now own the ${miner.name}!`
+        description: `You now own the ${miner.name}!`,
       });
 
       fetchOwnedMiners();
+      refreshProfile(); // Refresh user balance
     } catch (error: any) {
       console.error('Error purchasing miner:', error);
-      toast.error({
+      toast({
         title: "Purchase Failed",
-        description: error.message || "Failed to purchase miner. Please try again."
+        description: error.message || "Failed to purchase miner. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -285,10 +290,10 @@ const Airdrop = () => {
               Back to Dashboard
             </Link>
             
-            <h1 className={`text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+            <h1 className={`text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent transition-all duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
               🎁 GCoin Airdrop Mining
             </h1>
-            <p className={`text-gray-600 text-lg transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+            <p className={`text-gray-600 text-base md:text-lg transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
               Mine GCoins with our advanced mining equipment
             </p>
           </div>
@@ -296,8 +301,8 @@ const Airdrop = () => {
           {/* Active Mining Sessions */}
           {activeSessions.length > 0 && (
             <div className={`mb-8 transition-all duration-500 delay-200 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <h2 className="text-2xl font-bold mb-4 text-gray-800">Active Mining Sessions</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <h2 className="text-xl md:text-2xl font-bold mb-4 text-gray-800">Active Mining Sessions</h2>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {activeSessions.map((session) => {
                   const miner = defaultMiners.find(m => m.id === session.miner_id);
                   const canClaim = canClaimRewards(session);
@@ -309,8 +314,8 @@ const Airdrop = () => {
                     <Card key={session.id} className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{miner?.name}</CardTitle>
-                          <Badge className="bg-green-100 text-green-800">
+                          <CardTitle className="text-base md:text-lg">{miner?.name}</CardTitle>
+                          <Badge className="bg-green-100 text-green-800 text-xs">
                             {canClaim ? 'Ready' : 'Mining'}
                           </Badge>
                         </div>
@@ -331,7 +336,7 @@ const Airdrop = () => {
                         <Button
                           onClick={() => claimRewards(session)}
                           disabled={!canClaim || isLoading}
-                          className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                          className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-sm"
                         >
                           <Gift className="h-4 w-4 mr-2" />
                           {canClaim ? 'Claim Rewards' : 'Mining...'}
@@ -346,8 +351,8 @@ const Airdrop = () => {
 
           {/* Miners Grid */}
           <div className={`transition-all duration-500 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <h2 className="text-2xl font-bold mb-6 text-gray-800">Mining Equipment</h2>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <h2 className="text-xl md:text-2xl font-bold mb-6 text-gray-800">Mining Equipment</h2>
+            <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {updatedMiners.map((miner) => (
                 <MinerCard
                   key={miner.id}
@@ -364,7 +369,7 @@ const Airdrop = () => {
           <div className={`mt-8 transition-all duration-500 delay-400 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
               <CardHeader>
-                <CardTitle className="text-xl text-blue-800">Mining Information</CardTitle>
+                <CardTitle className="text-lg md:text-xl text-blue-800">Mining Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-blue-700">
                 <p>• Mining sessions last for 6 hours each</p>

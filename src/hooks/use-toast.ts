@@ -42,7 +42,7 @@ export const toaster = {
       title: toast.title,
       description: toast.description,
       action: toast.action,
-      variant: toast.variant,
+      variant: toast.variant || "default",
     };
 
     this.toasts = [newToast, ...this.toasts].slice(0, TOAST_LIMIT);

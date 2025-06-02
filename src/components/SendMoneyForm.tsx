@@ -1,4 +1,5 @@
-import { useState, React } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,7 +46,7 @@ const SendMoneyForm = ({ onSuccess, initialRecipient }: SendMoneyFormProps) => {
   });
 
   // Update form when initialRecipient changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialRecipient) {
       form.setValue('recipient', initialRecipient);
     }

@@ -90,6 +90,45 @@ export type Database = {
         }
         Relationships: []
       }
+      mining_sessions: {
+        Row: {
+          amount_earned: number
+          claimed: boolean
+          created_at: string
+          end_time: string
+          estimated_earning: number
+          id: string
+          miner_id: string
+          rate_per_second: number
+          start_time: string
+          user_id: string
+        }
+        Insert: {
+          amount_earned?: number
+          claimed?: boolean
+          created_at?: string
+          end_time: string
+          estimated_earning?: number
+          id?: string
+          miner_id: string
+          rate_per_second?: number
+          start_time?: string
+          user_id: string
+        }
+        Update: {
+          amount_earned?: number
+          claimed?: boolean
+          created_at?: string
+          end_time?: string
+          estimated_earning?: number
+          id?: string
+          miner_id?: string
+          rate_per_second?: number
+          start_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -230,6 +269,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_miners: {
+        Row: {
+          id: string
+          miner_id: string
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          miner_id: string
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          miner_id?: string
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       verify_transaction_pin: {
         Row: {
           created_at: string | null
@@ -253,6 +313,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_mining_rewards: {
+        Args: { user_id_param: string; amount_param: number }
+        Returns: undefined
+      }
       admin_create_profile: {
         Args: {
           p_id: string
@@ -303,6 +367,10 @@ export type Database = {
       }
       process_completed_stakes: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      purchase_miner: {
+        Args: { miner_id_param: string; price_param: number }
         Returns: undefined
       }
       sell_gcoin: {

@@ -1,115 +1,24 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
-type AdminUser = {
+interface AdminUser {
   id: string;
   email: string;
   wallet_address: string;
-  is_admin: boolean;
-};
-
-interface AdminAuthContextProps {
-  adminUser: AdminUser | null;
-  adminIsLoading: boolean;
-  adminLogin: (email: string, password: string) => Promise<void>;
-  adminLogout: () => Promise<void>;
+  balance: number;
 }
 
-const AdminAuthContext = createContext<AdminAuthContextProps | undefined>(undefined);
+interface AdminAuthContextType {
+  adminUser: AdminUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
 
-export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [adminIsLoading, setAdminIsLoading] = useState(true);
-  const { toast } = useToast();
-
-  // Check for stored admin session on load
-  useEffect(() => {
-    const storedSession = sessionStorage.getItem('gwallet_admin_session');
-    if (storedSession) {
-      try {
-        const parsedSession = JSON.parse(storedSession);
-        setAdminUser(parsedSession);
-      } catch (error) {
-        console.error('Error parsing admin session:', error);
-        sessionStorage.removeItem('gwallet_admin_session');
-      }
-    }
-    setAdminIsLoading(false);
-  }, []);
-
-  const adminLogin = async (email: string, password: string) => {
-    try {
-      setAdminIsLoading(true);
-      
-      // Use the Supabase function to authenticate admin
-      const { data, error } = await supabase.rpc('get_admin_session', {
-        admin_email: email,
-        admin_password: password
-      });
-      
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      
-      // Store the admin session
-      setAdminUser(data as AdminUser);
-      sessionStorage.setItem('gwallet_admin_auth', 'true');
-      sessionStorage.setItem('gwallet_admin_session', JSON.stringify(data));
-      
-      toast.success({
-        title: 'Login Successful',
-        description: 'Welcome to the admin dashboard'
-      });
-    } catch (error: any) {
-      console.error('Admin login error:', error);
-      toast.error({
-        title: 'Login Failed',
-        description: error.message || 'Invalid credentials'
-      });
-      throw error;
-    } finally {
-      setAdminIsLoading(false);
-    }
-  };
-
-  const adminLogout = async () => {
-    try {
-      setAdminIsLoading(true);
-      
-      // Clear admin session
-      setAdminUser(null);
-      sessionStorage.removeItem('gwallet_admin_auth');
-      sessionStorage.removeItem('gwallet_admin_session');
-      
-      toast.success({
-        title: 'Logged Out',
-        description: 'You have been logged out of the admin panel'
-      });
-    } catch (error: any) {
-      console.error('Admin logout error:', error);
-      toast.error({
-        title: 'Logout Error',
-        description: error.message
-      });
-    } finally {
-      setAdminIsLoading(false);
-    }
-  };
-
-  const contextValue: AdminAuthContextProps = {
-    adminUser,
-    adminIsLoading,
-    adminLogin,
-    adminLogout
-  };
-
-  return (
-    <AdminAuthContext.Provider value={contextValue}>
-      {children}
-    </AdminAuthContext.Provider>
-  );
-};
+const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const useAdminAuth = () => {
   const context = useContext(AdminAuthContext);
@@ -117,4 +26,91 @@ export const useAdminAuth = () => {
     throw new Error('useAdminAuth must be used within an AdminAuthProvider');
   }
   return context;
+};
+
+interface AdminAuthProviderProps {
+  children: ReactNode;
+}
+
+export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }) => {
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if admin is already logged in
+    const adminData = localStorage.getItem('adminUser');
+    if (adminData) {
+      try {
+        setAdminUser(JSON.parse(adminData));
+      } catch (error) {
+        console.error('Error parsing admin data:', error);
+        localStorage.removeItem('adminUser');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      // This is a simplified admin login - in production, you'd want proper authentication
+      const { data, error } = await supabase.rpc('get_admin_session', {
+        admin_email: email,
+        admin_password: password
+      });
+
+      if (error) throw error;
+
+      if (data && !data.error) {
+        const adminUserData = {
+          id: data.id,
+          email: data.email,
+          wallet_address: data.wallet_address,
+          balance: data.balance
+        };
+        
+        setAdminUser(adminUserData);
+        localStorage.setItem('adminUser', JSON.stringify(adminUserData));
+
+        toast.success({
+          title: "Welcome back, Admin!",
+          description: "You have successfully signed in to the admin panel.",
+        });
+      } else {
+        throw new Error(data.error || 'Invalid admin credentials');
+      }
+    } catch (error: any) {
+      toast.error({
+        title: "Admin sign in failed",
+        description: error.message || "Invalid admin credentials.",
+      });
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      setAdminUser(null);
+      localStorage.removeItem('adminUser');
+
+      toast.success({
+        title: "Signed out successfully",
+        description: "You have been logged out of the admin panel.",
+      });
+    } catch (error: any) {
+      toast.error({
+        title: "Sign out failed",
+        description: error.message || "An error occurred during sign out.",
+      });
+    }
+  };
+
+  const value = {
+    adminUser,
+    isAuthenticated: !!adminUser,
+    isLoading,
+    signIn,
+    signOut,
+  };
+
+  return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 };

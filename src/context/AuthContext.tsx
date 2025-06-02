@@ -24,6 +24,12 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
+  // Legacy method names for compatibility
+  register: (username: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,9 +68,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           username: data.username,
           wallet_address: data.wallet_address,
           balance: data.balance || 0,
-          usd_balance: 0, // Mock data for now
-          ngn_balance: 0,
-          ghs_balance: 0,
+          usd_balance: data.balance ? (data.balance / 850) : 0, // Convert from GCoin to USD
+          ngn_balance: data.balance ? (data.balance * 850) : 0, // Convert from GCoin to NGN
+          ghs_balance: data.balance ? (data.balance * 8.5) : 0, // Convert from GCoin to GHS
         });
       }
     } catch (error) {
@@ -176,6 +182,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error({
+        title: "Google sign in failed",
+        description: error.message || "An error occurred during Google sign in.",
+      });
+      throw error;
+    }
+  };
+
+  // Legacy method names for compatibility
+  const register = async (username: string, email: string, password: string) => {
+    await signUp(email, password, username);
+  };
+
+  const login = async (email: string, password: string) => {
+    await signIn(email, password);
+  };
+
+  const logout = async () => {
+    await signOut();
+  };
+
   const value = {
     user,
     session,
@@ -185,6 +223,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signOut,
     refreshProfile,
+    setUser,
+    register,
+    login,
+    logout,
+    signInWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

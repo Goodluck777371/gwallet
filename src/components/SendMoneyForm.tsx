@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, React } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,20 +28,28 @@ type FormData = z.infer<typeof formSchema>;
 
 interface SendMoneyFormProps {
   onSuccess?: () => void;
+  initialRecipient?: string;
 }
 
-const SendMoneyForm = ({ onSuccess }: SendMoneyFormProps) => {
+const SendMoneyForm = ({ onSuccess, initialRecipient }: SendMoneyFormProps) => {
   const { user, refreshProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      recipient: "",
+      recipient: initialRecipient || "",
       amount: "",
       note: "",
     },
   });
+
+  // Update form when initialRecipient changes
+  React.useEffect(() => {
+    if (initialRecipient) {
+      form.setValue('recipient', initialRecipient);
+    }
+  }, [initialRecipient, form]);
 
   const onSubmit = async (data: FormData) => {
     if (!user) {

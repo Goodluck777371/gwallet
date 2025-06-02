@@ -14,8 +14,11 @@ interface AdminAuthContextType {
   adminUser: AdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  adminIsLoading: boolean; // Added this property
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  adminLogin: (email: string, password: string) => Promise<void>; // Added this property
+  adminLogout: () => Promise<void>; // Added this property
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
@@ -71,7 +74,7 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
         setAdminUser(adminUserData);
         localStorage.setItem('adminUser', JSON.stringify(adminUserData));
 
-        toast.success({
+        toast({
           title: "Welcome back, Admin!",
           description: "You have successfully signed in to the admin panel.",
         });
@@ -79,9 +82,10 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
         throw new Error(data.error || 'Invalid admin credentials');
       }
     } catch (error: any) {
-      toast.error({
+      toast({
         title: "Admin sign in failed",
         description: error.message || "Invalid admin credentials.",
+        variant: "destructive",
       });
       throw error;
     }
@@ -92,24 +96,32 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
       setAdminUser(null);
       localStorage.removeItem('adminUser');
 
-      toast.success({
+      toast({
         title: "Signed out successfully",
         description: "You have been logged out of the admin panel.",
       });
     } catch (error: any) {
-      toast.error({
+      toast({
         title: "Sign out failed",
         description: error.message || "An error occurred during sign out.",
+        variant: "destructive",
       });
     }
   };
+
+  // Legacy method aliases for compatibility
+  const adminLogin = signIn;
+  const adminLogout = signOut;
 
   const value = {
     adminUser,
     isAuthenticated: !!adminUser,
     isLoading,
+    adminIsLoading: isLoading, // Alias for compatibility
     signIn,
     signOut,
+    adminLogin,
+    adminLogout,
   };
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

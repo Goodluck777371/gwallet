@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import Header from "@/components/Header";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -42,22 +43,36 @@ const Login = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("Login form submitted with values:", values);
     setIsSubmitting(true);
     try {
       await login(values.email, values.password);
+      console.log("Login successful");
     } catch (error) {
       console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: "Please check your credentials and try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
+    console.log("Google sign in clicked");
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Google login error:", error);
+      toast({
+        title: "Google login failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -131,8 +146,9 @@ const Login = () => {
                 
                 <Button 
                   type="submit" 
-                  className="w-full"
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
                   disabled={isSubmitting || authLoading}
+                  onClick={() => console.log("Login button clicked")}
                 >
                   {isSubmitting || authLoading ? (
                     <>

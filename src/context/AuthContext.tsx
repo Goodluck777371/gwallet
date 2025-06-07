@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -22,6 +21,9 @@ interface AuthContextType {
   register: (email: string, password: string, username: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUser: (user: Profile | null) => void;
+  refreshProfile: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +73,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error refreshing user:', error);
       setUser(null);
+    }
+  };
+
+  const refreshProfile = async () => {
+    await refreshUser();
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      console.log("Attempting Google sign in");
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) {
+        console.error("Google sign in error:", error);
+        throw error;
+      }
+
+      console.log("Google sign in initiated");
+    } catch (error) {
+      console.error("Google sign in catch error:", error);
+      throw error;
     }
   };
 
@@ -191,6 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     refreshUser,
+    setUser,
+    refreshProfile,
+    signInWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

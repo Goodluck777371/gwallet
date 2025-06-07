@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 interface SplashScreenProps {
-  onFinished: () => void;
+  onFinished?: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onFinished }) => {
@@ -16,9 +16,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinished }) => {
       setFadeOut(true);
     }, 2000);
     
-    // After fade out animation is complete, call onFinished
+    // After fade out animation is complete, call onFinished if provided
     const completeTimer = setTimeout(() => {
-      onFinished();
+      if (onFinished) {
+        onFinished();
+      }
     }, 2500);
     
     return () => {

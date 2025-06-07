@@ -1,4 +1,5 @@
 
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
@@ -28,7 +29,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminTransactions from "@/pages/admin/AdminTransactions";
 import AdminStaking from "@/pages/admin/AdminStaking";
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
@@ -38,7 +39,7 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="*" element={<NotFound />} />
             
             {/* User Routes */}
@@ -66,6 +67,6 @@ function App() {
       </AuthProvider>
     </Router>
   );
-}
+};
 
 export default App;

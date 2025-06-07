@@ -31,9 +31,9 @@ import AdminStaking from "@/pages/admin/AdminStaking";
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <AdminAuthProvider>
+    <AuthProvider>
+      <AdminAuthProvider>
+        <Router>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
@@ -63,9 +63,9 @@ const App: React.FC = () => {
             </Route>
           </Routes>
           <Toaster />
-        </AdminAuthProvider>
-      </AuthProvider>
-    </Router>
+        </Router>
+      </AdminAuthProvider>
+    </AuthProvider>
   );
 };
 

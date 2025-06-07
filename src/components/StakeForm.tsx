@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNumber } from "@/lib/utils";
 import { Clock, TrendingUp, Coins, AlertTriangle } from "lucide-react";
@@ -22,9 +22,12 @@ interface StakingPosition {
   status: string;
 }
 
-const StakeForm = () => {
+interface StakeFormProps {
+  onSuccess?: () => void;
+}
+
+const StakeForm: React.FC<StakeFormProps> = ({ onSuccess }) => {
   const { user, refreshProfile } = useAuth();
-  const { toast } = useToast();
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -120,6 +123,7 @@ const StakeForm = () => {
       setDuration("");
       fetchStakingPositions();
       refreshProfile();
+      onSuccess?.();
     } catch (error: any) {
       toast({
         title: "Staking Failed",
@@ -131,8 +135,35 @@ const StakeForm = () => {
     }
   };
 
+  const handleClaim = async (stakingId: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.rpc('unstake_gcoin', {
+        staking_id: stakingId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Rewards Claimed! 💰",
+        description: "Your stake has been completed and rewards claimed.",
+      });
+
+      fetchStakingPositions();
+      refreshProfile();
+    } catch (error: any) {
+      toast({
+        title: "Claim Failed",
+        description: error.message || "Failed to claim rewards. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleUnstake = async (stakingId: string) => {
-    if (!confirm("Are you sure you want to unstake? Early unstaking may incur a penalty.")) {
+    if (!confirm("Are you sure you want to unstake early? This will incur a 10% penalty.")) {
       return;
     }
 
@@ -145,8 +176,8 @@ const StakeForm = () => {
       if (error) throw error;
 
       toast({
-        title: "Unstaking Successful! 💰",
-        description: "Your GCoins have been returned to your balance.",
+        title: "Early Unstaking Complete! ⚠️",
+        description: "Your GCoins have been returned with a 10% penalty.",
       });
 
       fetchStakingPositions();
@@ -313,7 +344,7 @@ const StakeForm = () => {
                                 : 'bg-blue-100 text-blue-800'
                             }`}
                           >
-                            {position.status}
+                            {isCompleted(position.end_date) && position.status === 'active' ? 'Ready to Claim' : position.status}
                           </Badge>
                           <p className="text-xs text-gray-500 break-all">
                             {getTimeRemaining(position.end_date)}
@@ -321,20 +352,29 @@ const StakeForm = () => {
                         </div>
                         
                         {position.status === 'active' && (
-                          <Button
-                            onClick={() => handleUnstake(position.id)}
-                            disabled={isLoading}
-                            variant={isCompleted(position.end_date) ? "default" : "destructive"}
-                            size="sm"
-                            className="w-full sm:w-auto min-w-[100px] flex items-center justify-center gap-1"
-                          >
-                            {!isCompleted(position.end_date) && (
-                              <AlertTriangle className="h-3 w-3" />
+                          <div className="flex gap-2">
+                            {isCompleted(position.end_date) ? (
+                              <Button
+                                onClick={() => handleClaim(position.id)}
+                                disabled={isLoading}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                size="sm"
+                              >
+                                Claim Rewards
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => handleUnstake(position.id)}
+                                disabled={isLoading}
+                                variant="destructive"
+                                size="sm"
+                                className="min-w-[100px] flex items-center justify-center gap-1"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                <span className="text-xs">Unstake Early</span>
+                              </Button>
                             )}
-                            <span className="text-xs">
-                              {isCompleted(position.end_date) ? "Claim" : "Unstake"}
-                            </span>
-                          </Button>
+                          </div>
                         )}
                       </div>
                     </div>

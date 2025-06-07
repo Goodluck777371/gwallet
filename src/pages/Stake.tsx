@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import StakeForm from "@/components/StakeForm";
 import StakingHistory from "@/components/StakingHistory";
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Stake = () => {
   const { isAuthenticated, user } = useAuth();
-  const { toast } = useToast();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -26,7 +25,6 @@ const Stake = () => {
     toast({
       title: "Staking Successful! 🎉",
       description: "Your GCoins have been staked successfully.",
-      variant: "credit",
     });
   };
 

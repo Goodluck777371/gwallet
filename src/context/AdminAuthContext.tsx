@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 type AdminUser = {
   id: string;
@@ -22,7 +22,6 @@ const AdminAuthContext = createContext<AdminAuthContextProps | undefined>(undefi
 export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [adminIsLoading, setAdminIsLoading] = useState(true);
-  const { toast } = useToast();
 
   // Check for stored admin session on load
   useEffect(() => {
@@ -57,15 +56,16 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.setItem('gwallet_admin_auth', 'true');
       sessionStorage.setItem('gwallet_admin_session', JSON.stringify(data));
       
-      toast.success({
+      toast({
         title: 'Login Successful',
         description: 'Welcome to the admin dashboard'
       });
     } catch (error: any) {
       console.error('Admin login error:', error);
-      toast.error({
+      toast({
         title: 'Login Failed',
-        description: error.message || 'Invalid credentials'
+        description: error.message || 'Invalid credentials',
+        variant: 'destructive'
       });
       throw error;
     } finally {
@@ -82,15 +82,16 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.removeItem('gwallet_admin_auth');
       sessionStorage.removeItem('gwallet_admin_session');
       
-      toast.success({
+      toast({
         title: 'Logged Out',
         description: 'You have been logged out of the admin panel'
       });
     } catch (error: any) {
       console.error('Admin logout error:', error);
-      toast.error({
+      toast({
         title: 'Logout Error',
-        description: error.message
+        description: error.message,
+        variant: 'destructive'
       });
     } finally {
       setAdminIsLoading(false);

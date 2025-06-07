@@ -4,7 +4,7 @@ import { ArrowLeft, Play, Pause, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ interface Miner {
   ratePerSecond: number;
   price: number;
   owned: boolean;
+  ownedCount?: number;
 }
 
 interface MiningSession {
@@ -31,13 +32,13 @@ interface MiningSession {
   estimated_earning: number;
   amount_earned: number;
   claimed: boolean;
+  rate_per_second: number;
 }
 
 const Airdrop = () => {
   const { user, refreshProfile } = useAuth();
-  const { toast } = useToast();
   const [miners, setMiners] = useState<Miner[]>([]);
-  const [ownedMiners, setOwnedMiners] = useState<string[]>([]);
+  const [ownedMiners, setOwnedMiners] = useState<{[key: string]: number}>({});
   const [activeSessions, setActiveSessions] = useState<MiningSession[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +60,7 @@ const Airdrop = () => {
       description: "Advanced mining equipment for serious miners",
       image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=400&h=300&fit=crop",
       hours: 6,
-      ratePerSecond: 0.002,
+      ratePerSecond: 2,
       price: 1000,
       owned: false
     },
@@ -69,7 +70,7 @@ const Airdrop = () => {
       description: "High-performance mining with excellent returns",
       image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop",
       hours: 6,
-      ratePerSecond: 0.2,
+      ratePerSecond: 20,
       price: 500000,
       owned: false
     },
@@ -79,7 +80,7 @@ const Airdrop = () => {
       description: "The ultimate mining machine for maximum profits",
       image: "https://images.unsplash.com/photo-1487887235947-a955ef187fcc?w=400&h=300&fit=crop",
       hours: 6,
-      ratePerSecond: 1,
+      ratePerSecond: 100,
       price: 1000000,
       owned: false
     }
@@ -109,8 +110,13 @@ const Airdrop = () => {
 
       if (error) throw error;
       
-      const owned = data?.map(item => item.miner_id) || [];
-      setOwnedMiners(['free-miner', ...owned]);
+      // Count owned miners
+      const owned: {[key: string]: number} = { 'free-miner': 1 };
+      data?.forEach(item => {
+        owned[item.miner_id] = (owned[item.miner_id] || 0) + 1;
+      });
+      
+      setOwnedMiners(owned);
     } catch (error) {
       console.error('Error fetching owned miners:', error);
     }
@@ -214,7 +220,7 @@ const Airdrop = () => {
       });
 
       fetchActiveSessions();
-      refreshProfile(); // Refresh user balance
+      refreshProfile();
     } catch (error) {
       console.error('Error claiming rewards:', error);
       toast({
@@ -241,11 +247,11 @@ const Airdrop = () => {
 
       toast({
         title: "Miner Purchased! 🎉",
-        description: `You now own the ${miner.name}!`,
+        description: `You now own another ${miner.name}!`,
       });
 
       fetchOwnedMiners();
-      refreshProfile(); // Refresh user balance
+      refreshProfile();
     } catch (error: any) {
       console.error('Error purchasing miner:', error);
       toast({
@@ -260,16 +266,18 @@ const Airdrop = () => {
 
   const updatedMiners = defaultMiners.map(miner => ({
     ...miner,
-    owned: ownedMiners.includes(miner.id)
+    owned: (ownedMiners[miner.id] || 0) > 0,
+    ownedCount: ownedMiners[miner.id] || 0
   }));
 
-  const getSessionForMiner = (minerId: string) => {
-    return activeSessions.find(session => session.miner_id === minerId);
+  const getActiveSessionsForMiner = (minerId: string) => {
+    return activeSessions.filter(session => session.miner_id === minerId);
   };
 
   const canStartMining = (miner: Miner) => {
-    const session = getSessionForMiner(miner.id);
-    return miner.owned && !session;
+    const activeSessionsCount = getActiveSessionsForMiner(miner.id).length;
+    const ownedCount = ownedMiners[miner.id] || 0;
+    return ownedCount > activeSessionsCount;
   };
 
   const canClaimRewards = (session: MiningSession) => {
@@ -310,6 +318,10 @@ const Airdrop = () => {
                   const endTime = new Date(session.end_time);
                   const progress = Math.min(100, ((now.getTime() - new Date(session.start_time).getTime()) / (endTime.getTime() - new Date(session.start_time).getTime())) * 100);
                   
+                  // Calculate current earnings
+                  const elapsedTime = (now.getTime() - new Date(session.start_time).getTime()) / 1000;
+                  const currentEarnings = Math.min(session.estimated_earning, session.rate_per_second * elapsedTime);
+                  
                   return (
                     <Card key={session.id} className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
                       <CardHeader className="pb-2">
@@ -329,17 +341,17 @@ const Airdrop = () => {
                         </div>
                         
                         <div className="text-sm text-gray-600">
-                          <div>Estimated: {formatNumber(session.estimated_earning)} GCoins</div>
+                          <div>Mined: {formatNumber(currentEarnings)} GCoins</div>
                           <div>Progress: {Math.round(progress)}%</div>
                         </div>
                         
                         <Button
                           onClick={() => claimRewards(session)}
-                          disabled={!canClaim || isLoading}
+                          disabled={isLoading}
                           className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-sm"
                         >
                           <Gift className="h-4 w-4 mr-2" />
-                          {canClaim ? 'Claim Rewards' : 'Mining...'}
+                          Claim {formatNumber(currentEarnings)} GCoins
                         </Button>
                       </CardContent>
                     </Card>
@@ -359,7 +371,9 @@ const Airdrop = () => {
                   miner={miner}
                   onStartMining={() => startMining(miner)}
                   onPurchase={() => purchaseMiner(miner)}
-                  disabled={isLoading || !canStartMining(miner)}
+                  disabled={isLoading}
+                  canStartMining={canStartMining(miner)}
+                  activeSessionsCount={getActiveSessionsForMiner(miner.id).length}
                 />
               ))}
             </div>
@@ -373,8 +387,9 @@ const Airdrop = () => {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-blue-700">
                 <p>• Mining sessions last for 6 hours each</p>
-                <p>• You can claim rewards once the session is complete</p>
-                <p>• Purchase better miners for higher earning rates</p>
+                <p>• You can buy multiple miners of the same type</p>
+                <p>• Each miner can run one mining session at a time</p>
+                <p>• Claim rewards anytime during or after completion</p>
                 <p>• Free miner is available to all users</p>
                 <p>• All earnings are credited to your main GCoin balance</p>
               </CardContent>

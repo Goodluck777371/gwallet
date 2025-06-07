@@ -38,8 +38,7 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
             
             {/* User Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
@@ -60,6 +59,9 @@ function App() {
               <Route path="transactions" element={<AdminTransactions />} />
               <Route path="staking" element={<AdminStaking />} />
             </Route>
+            
+            {/* Catch all route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
         </AdminAuthProvider>

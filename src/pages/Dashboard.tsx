@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +24,30 @@ const Dashboard = () => {
     }, 100);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch exchange rate
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('exchange_rates')
+          .select('rate')
+          .eq('currency', 'NGN')
+          .single();
+          
+        if (data) {
+          setExchangeRate(data.rate);
+        } else {
+          // Use default 850 if not found
+          setExchangeRate(850);
+        }
+      } catch (error) {
+        console.error("Error fetching exchange rate:", error);
+      }
+    };
+    
+    fetchExchangeRate();
   }, []);
 
   // Fetch transactions when user is available

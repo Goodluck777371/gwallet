@@ -32,11 +32,11 @@ const MultiCurrencyWallet: React.FC<MultiCurrencyWalletProps> = ({ className }) 
     cedis: user?.ghs_balance || 0,
   };
   
-  // Exchange rates (1 GCoin = X currency) - Fixed rate at 850 for NGN
+  // Exchange rates (1 GCoin = X currency)
   const exchangeRates = {
-    usd: 0.5, // 1 GCoin = 0.5 USD
-    naira: 850, // 1 GCoin = 850 Naira (FIXED)
-    cedis: 8.5, // 1 GCoin = 8.5 Cedis
+    usd: 0.3385, // 1 GCoin = 0.3385 USD
+    naira: 550, // 1 GCoin = 550 Naira
+    cedis: 6.11, // 1 GCoin = 6.11 Cedis
   };
   
   // Currency symbols and formatting

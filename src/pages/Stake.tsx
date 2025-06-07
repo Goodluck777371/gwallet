@@ -59,7 +59,7 @@ const Stake = () => {
               
               <TabsContent value="stake" className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                  <StakeForm />
+                  <StakeForm onSuccess={handleStakeSuccess} />
                 </div>
               </TabsContent>
               

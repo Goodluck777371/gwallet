@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
-import SendMoneyForm from "@/components/SendMoneyForm";
+import { SendMoneyForm } from "@/components/SendMoneyForm";
 
 // Parse query params
 function useQuery() {
@@ -36,10 +37,10 @@ const Send = () => {
   }, [addressFromQR]);
 
   const handleTransactionSuccess = () => {
-    toast({
+    toast.toast({
       title: "Transfer Successful! 🎉",
       description: "Your GCoins have been sent successfully.",
-      variant: "default",
+      variant: "debit", // Using our new variant for debit transactions
     });
   };
 

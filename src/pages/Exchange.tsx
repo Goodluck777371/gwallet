@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, ArrowDown } from "lucide-react";
+import { Loader2, AlertCircle, ArrowDown } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
@@ -65,27 +65,42 @@ const Exchange = () => {
       return;
     }
     
-    // Set balances from user data
+    // Set GCoin balance from user
     setBalances(prev => ({
       ...prev,
-      GCoin: user.balance || 0,
-      USD: user.usd_balance || 0,
-      NGN: user.ngn_balance || 0,
-      GHS: user.ghs_balance || 0
+      GCoin: user.balance || 0
     }));
     
+    // Fetch currency balances
+    fetchCurrencyBalances();
+    
   }, [user, navigate]);
+
+  const fetchCurrencyBalances = async () => {
+    try {
+      // In a real app, fetch from database
+      // Mock balances for now
+      setBalances({
+        GCoin: user?.balance || 0,
+        USD: 500,
+        NGN: 75000,
+        GHS: 1500
+      });
+    } catch (error) {
+      console.error("Failed to fetch balances", error);
+    }
+  };
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
       setIsCalculating(true);
       try {
-        // Fixed exchange rates matching dashboard (850 NGN per GCoin)
+        // Setting fixed exchange rates for the demo
         let rate;
         if (fromCurrency === "GCoin" && toCurrency === "USD") {
           rate = 0.5; // 1 GCoin = 0.5 USD
         } else if (fromCurrency === "GCoin" && toCurrency === "NGN") {
-          rate = 850; // 1 GCoin = 850 Naira (FIXED)
+          rate = 850; // 1 GCoin = 850 Naira
         } else if (fromCurrency === "GCoin" && toCurrency === "GHS") {
           rate = 8.5; // 1 GCoin = 8.5 Cedis
         } else if (fromCurrency === "USD" && toCurrency === "GCoin") {
@@ -173,28 +188,23 @@ const Exchange = () => {
     setIsLoading(true);
 
     try {
+      // Simulate exchange process
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       const numAmount = parseFloat(amount);
       const exchangedAmount = numAmount * (exchangeRate || 1);
 
-      // If exchanging from GCoin, update user's GCoin balance
-      if (fromCurrency === "GCoin") {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ balance: (user?.balance || 0) - numAmount })
-          .eq('id', user?.id);
-
-        if (error) throw error;
-      }
-
-      // Update local balances
+      // Update balances
       setBalances(prev => ({
         ...prev,
         [fromCurrency]: prev[fromCurrency as keyof typeof prev] - numAmount,
         [toCurrency]: prev[toCurrency as keyof typeof prev] + exchangedAmount
       }));
 
-      // Refresh user profile to get updated balance
-      await refreshProfile();
+      // If exchanging from or to GCoin, update user balance via API
+      if (fromCurrency === "GCoin" || toCurrency === "GCoin") {
+        await refreshProfile();
+      }
 
       toast.success({
         title: "Exchange Successful",

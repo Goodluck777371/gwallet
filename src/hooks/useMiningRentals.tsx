@@ -50,17 +50,68 @@ export const useMiningRentals = () => {
     try {
       console.log("Renting miner:", { minerId, days, price });
       
-      const { data, error } = await supabase.rpc('rent_miner', {
-        miner_id_param: minerId,
-        rental_days_param: days,
-        rental_price_param: price
-      });
+      // Check user balance first
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      if (profileData.balance < price) {
+        throw new Error('Insufficient balance to rent this miner');
+      }
+
+      // Create the mining rental
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + days * 24 * 60 * 60 * 1000);
+      
+      const { data: rentalData, error: rentalError } = await supabase
+        .from('mining_rentals')
+        .insert({
+          user_id: user.id,
+          miner_id: minerId,
+          rental_days: days,
+          rental_price: price,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          status: 'active',
+          total_earnings: 0,
+          claimed_earnings: 0
+        })
+        .select()
+        .single();
+
+      if (rentalError) throw rentalError;
+
+      // Deduct the rental price from user balance
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: profileData.balance - price })
+        .eq('id', user.id);
+
+      if (balanceError) throw balanceError;
+
+      // Record the transaction
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: 'miner_rental',
+          amount: price,
+          fee: 0,
+          recipient: 'Mining Pool',
+          sender: 'You',
+          status: 'completed',
+          description: `Rented ${minerId.replace('-', ' ')} for ${days} days`
+        });
+
+      if (transactionError) throw transactionError;
 
       toast({
         title: "Miner Rented Successfully! ⛏️",
-        description: `Miner rented for ${days} days.`,
+        description: `Miner rented for ${days} days. Mining will start automatically!`,
       });
 
       await Promise.all([
@@ -87,17 +138,78 @@ export const useMiningRentals = () => {
     try {
       console.log("Claiming earnings for rental:", rentalId);
       
-      const { data, error } = await supabase.rpc('claim_mining_earnings', {
-        rental_id_param: rentalId
-      });
+      // Get the rental details
+      const { data: rental, error: rentalError } = await supabase
+        .from('mining_rentals')
+        .select('*')
+        .eq('id', rentalId)
+        .eq('user_id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (rentalError) throw rentalError;
 
-      const claimedAmount = data;
+      const now = new Date();
+      const startTime = new Date(rental.start_time);
+      const endTime = new Date(rental.end_time);
+      
+      // Calculate how much time has passed
+      const timeElapsed = Math.min(now.getTime() - startTime.getTime(), endTime.getTime() - startTime.getTime());
+      const hoursElapsed = timeElapsed / (1000 * 60 * 60);
+      
+      // Get miner hourly rate from the miners data
+      const minerRates = {
+        'free-miner': 25,
+        'epic-miner': 75,
+        'legendary-miner': 150,
+        'super-miner': 300
+      };
+      
+      const hourlyRate = minerRates[rental.miner_id as keyof typeof minerRates] || 25;
+      const totalEarnings = hoursElapsed * hourlyRate;
+      const claimableAmount = totalEarnings - rental.claimed_earnings;
+
+      if (claimableAmount <= 0) {
+        throw new Error('No earnings available to claim yet');
+      }
+
+      // Update rental with new claimed earnings
+      const { error: updateError } = await supabase
+        .from('mining_rentals')
+        .update({
+          total_earnings: totalEarnings,
+          claimed_earnings: totalEarnings
+        })
+        .eq('id', rentalId);
+
+      if (updateError) throw updateError;
+
+      // Add earnings to user balance
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ balance: supabase.raw(`balance + ${claimableAmount}`) })
+        .eq('id', user.id);
+
+      if (balanceError) throw balanceError;
+
+      // Record transaction
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: 'mining_reward',
+          amount: claimableAmount,
+          fee: 0,
+          recipient: 'You',
+          sender: 'Mining Pool',
+          status: 'completed',
+          description: `Mining earnings from ${rental.miner_id.replace('-', ' ')}`
+        });
+
+      if (transactionError) throw transactionError;
       
       toast({
         title: "Earnings Claimed! 🎉",
-        description: `You claimed ${claimedAmount.toFixed(2)} GCoins from mining.`,
+        description: `You claimed ${claimableAmount.toFixed(2)} GCoins from mining.`,
       });
 
       await Promise.all([

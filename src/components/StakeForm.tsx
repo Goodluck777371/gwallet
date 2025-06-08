@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ interface StakeFormProps {
 
 const StakeForm = ({ onSuccess }: StakeFormProps) => {
   const { user, refreshProfile } = useAuth();
+  const { toast } = useToast();
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -90,6 +91,11 @@ const StakeForm = ({ onSuccess }: StakeFormProps) => {
       
       // Refresh user profile
       await refreshProfile();
+      
+      toast({
+        title: "Staking Successful! 🎉",
+        description: "Your GCoins have been staked successfully.",
+      });
       
       onSuccess();
     } catch (error: any) {
@@ -200,7 +206,7 @@ const StakeForm = ({ onSuccess }: StakeFormProps) => {
         <CardContent className="p-4">
           <h3 className="font-medium text-blue-800 mb-2">Staking Information</h3>
           <ul className="text-xs text-blue-700 space-y-1">
-            <li>• Earn 15% APY on your staked GCoins (reduced from 30%)</li>
+            <li>• Earn 15% APY on your staked GCoins</li>
             <li>• Early unstaking incurs a 10% penalty on principal</li>
             <li>• Rewards are automatically added at completion</li>
             <li>• Minimum stake: 1 GCoin</li>

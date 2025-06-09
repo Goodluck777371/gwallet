@@ -10,9 +10,6 @@ interface UserProfile {
   username: string;
   wallet_address: string;
   balance: number;
-  usd_balance?: number;
-  ngn_balance?: number;
-  ghs_balance?: number;
 }
 
 interface AuthContextProps {
@@ -25,7 +22,6 @@ interface AuthContextProps {
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  setUser: (user: UserProfile | null) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -43,10 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
+      if (error) throw error;
       return data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -60,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('user_login_history')
         .insert({
           user_id: userId,
-          ip_address: '127.0.0.1',
+          ip_address: '127.0.0.1', // In production, get real IP
           user_agent: navigator.userAgent,
           status: 'success'
         });
@@ -70,40 +63,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (mounted) {
-          if (session?.user) {
-            const profile = await fetchUserProfile(session.user.id);
-            if (profile && mounted) {
-              setUser(profile);
-              setSession(session);
-            }
-          }
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
-        
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         
         if (session?.user) {
           const profile = await fetchUserProfile(session.user.id);
-          if (profile && mounted) {
+          if (profile) {
             setUser(profile);
             if (event === 'SIGNED_IN') {
               await recordLoginActivity(session.user.id);
@@ -113,53 +81,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
         
-        if (mounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     );
 
+    // Check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session check:', session?.user?.id);
+        
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id);
+          if (profile) {
+            setUser(profile);
+            setSession(session);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     initializeAuth();
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email,
+        password,
       });
 
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data?.user) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-      }
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
     } catch (error: any) {
       console.error('Login error:', error);
-      let errorMessage = 'Login failed. Please try again.';
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please check your credentials.';
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Please verify your email address before logging in.';
-      }
-      
       toast({
         title: 'Login failed',
-        description: errorMessage,
+        description: error.message,
         variant: 'destructive',
       });
       throw error;
@@ -171,42 +140,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (email: string, password: string, username: string) => {
     try {
       setIsLoading(true);
-      
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
+        email,
+        password,
         options: {
           data: {
-            username: username.trim(),
+            username,
           },
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
-      if (error) {
-        console.error('Registration error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data?.user) {
-        toast({
-          title: 'Registration successful!',
-          description: 'Please check your email to verify your account.',
-        });
-      }
+      toast({
+        title: 'Registration successful!',
+        description: 'Please check your email to verify your account.',
+      });
     } catch (error: any) {
       console.error('Registration error:', error);
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'An account with this email already exists.';
-      } else if (error.message?.includes('Password should be at least')) {
-        errorMessage = 'Password must be at least 6 characters long.';
-      }
-      
       toast({
         title: 'Registration failed',
-        description: errorMessage,
+        description: error.message,
         variant: 'destructive',
       });
       throw error;
@@ -243,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
@@ -259,8 +214,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -287,7 +240,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     signInWithGoogle,
     refreshProfile,
-    setUser,
   };
 
   return (

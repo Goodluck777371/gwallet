@@ -43,10 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
+      if (error) throw error;
       return data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -60,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('user_login_history')
         .insert({
           user_id: userId,
-          ip_address: '127.0.0.1',
+          ip_address: '127.0.0.1', // In production, get real IP
           user_agent: navigator.userAgent,
           status: 'success'
         });
@@ -94,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -130,36 +128,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email,
+        password,
       });
 
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data?.user) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-      }
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
     } catch (error: any) {
       console.error('Login error:', error);
-      let errorMessage = 'Login failed. Please try again.';
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please check your credentials.';
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Please verify your email address before logging in.';
-      }
-      
       toast({
         title: 'Login failed',
-        description: errorMessage,
+        description: error.message,
         variant: 'destructive',
       });
       throw error;
@@ -171,42 +155,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (email: string, password: string, username: string) => {
     try {
       setIsLoading(true);
-      
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
+        email,
+        password,
         options: {
           data: {
-            username: username.trim(),
+            username,
           },
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
-      if (error) {
-        console.error('Registration error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data?.user) {
-        toast({
-          title: 'Registration successful!',
-          description: 'Please check your email to verify your account.',
-        });
-      }
+      toast({
+        title: 'Registration successful!',
+        description: 'Please check your email to verify your account.',
+      });
     } catch (error: any) {
       console.error('Registration error:', error);
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'An account with this email already exists.';
-      } else if (error.message?.includes('Password should be at least')) {
-        errorMessage = 'Password must be at least 6 characters long.';
-      }
-      
       toast({
         title: 'Registration failed',
-        description: errorMessage,
+        description: error.message,
         variant: 'destructive',
       });
       throw error;
@@ -243,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
@@ -259,8 +229,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 

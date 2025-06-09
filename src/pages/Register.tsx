@@ -36,7 +36,7 @@ const formSchema = z.object({
 });
 
 const Register = () => {
-  const { register, signInWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { register, signInWithGoogle, isAuthenticated } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
@@ -51,29 +51,36 @@ const Register = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (isSubmitting) return; // Prevent double submission
+    
     setIsSubmitting(true);
     try {
-      await register(values.username, values.email, values.password);
+      await register(values.email, values.password, values.username);
+      // Don't need to handle success here, auth context will handle redirect
     } catch (error) {
       console.error("Registration error:", error);
+      // Error is already handled in register function with toast
     } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
+    if (isGoogleLoading) return; // Prevent double submission
+    
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Google signup error:", error);
+    } finally {
       setIsGoogleLoading(false);
     }
   };
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -102,6 +109,7 @@ const Register = () => {
                         <Input 
                           placeholder="Create a username" 
                           autoComplete="username"
+                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -121,6 +129,7 @@ const Register = () => {
                           placeholder="Enter your email" 
                           type="email"
                           autoComplete="email"
+                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -140,6 +149,7 @@ const Register = () => {
                           placeholder="Create a password" 
                           type="password"
                           autoComplete="new-password"
+                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -159,6 +169,7 @@ const Register = () => {
                           placeholder="Confirm your password" 
                           type="password"
                           autoComplete="new-password"
+                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -170,9 +181,9 @@ const Register = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isSubmitting || authLoading}
+                  disabled={isSubmitting}
                 >
-                  {isSubmitting || authLoading ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating account...
@@ -199,7 +210,7 @@ const Register = () => {
                 type="button" 
                 className="w-full mt-4 flex items-center justify-center"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleLoading}
+                disabled={isGoogleLoading || isSubmitting}
               >
                 {isGoogleLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

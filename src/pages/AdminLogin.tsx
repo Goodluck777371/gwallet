@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Loader2, Mail, Key } from "lucide-react";
+import { Shield, Loader2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdminAuth } from "@/context/AdminAuthContext";
@@ -10,14 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("admin@gcoin.com");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { adminLogin, adminUser } = useAdminAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // If already logged in, redirect to dashboard
   if (adminUser) {
     navigate("/admin/dashboard");
     return null;
@@ -30,7 +29,7 @@ const AdminLogin = () => {
       toast({
         title: "Missing Information",
         description: "Please enter both email and password.",
-        variant: "warning"
+        variant: "destructive"
       });
       return;
     }
@@ -40,7 +39,6 @@ const AdminLogin = () => {
       await adminLogin(email, password);
       navigate("/admin/dashboard");
     } catch (error) {
-      // Error is already handled in adminLogin function
       console.error("Admin login form error:", error);
     } finally {
       setIsLoading(false);
@@ -54,41 +52,39 @@ const AdminLogin = () => {
           <div className="mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-2">
             <Shield className="h-8 w-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold text-white">Admin Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-white">Admin Access</CardTitle>
           <CardDescription className="text-gray-300">
-            Enter your credentials to access the admin dashboard
+            Enter admin credentials to access dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
-                  disabled={isLoading}
-                />
-              </div>
+              <Label htmlFor="email" className="text-gray-300">Admin Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@gcoin.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
+                disabled={isLoading}
+              />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">Password</Label>
+              <Label htmlFor="password" className="text-gray-300">Admin Password</Label>
               <div className="relative">
                 <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter admin password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
                   disabled={isLoading}
+                  autoFocus
                 />
               </div>
             </div>
@@ -104,13 +100,20 @@ const AdminLogin = () => {
                   Authenticating...
                 </>
               ) : (
-                "Login to Dashboard"
+                "Access Dashboard"
               )}
             </Button>
           </form>
+          
+          <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-700/30">
+            <p className="text-xs text-blue-300">
+              <strong>Email:</strong> admin@gcoin.com<br />
+              <strong>Password:</strong> FantomAdmin990
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="text-center border-t border-white/10 text-gray-400 text-xs">
-          <p className="w-full">GWallet Admin • Protected Area • {new Date().getFullYear()}</p>
+          <p className="w-full">GWallet Admin • Secure Access • {new Date().getFullYear()}</p>
         </CardFooter>
       </Card>
     </div>

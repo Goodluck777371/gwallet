@@ -42,6 +42,8 @@ const Login = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (isSubmitting || authLoading) return;
+    
     setIsSubmitting(true);
     try {
       await login(values.email, values.password);
@@ -53,18 +55,20 @@ const Login = () => {
   };
   
   const handleGoogleSignIn = async () => {
+    if (isGoogleLoading || authLoading) return;
+    
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Google login error:", error);
+    } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -94,6 +98,7 @@ const Login = () => {
                           placeholder="Enter your email" 
                           type="email"
                           autoComplete="email"
+                          disabled={isSubmitting || authLoading}
                           {...field} 
                         />
                       </FormControl>
@@ -121,6 +126,7 @@ const Login = () => {
                           placeholder="Enter your password" 
                           type="password"
                           autoComplete="current-password"
+                          disabled={isSubmitting || authLoading}
                           {...field} 
                         />
                       </FormControl>
@@ -161,7 +167,7 @@ const Login = () => {
                 type="button" 
                 className="w-full mt-4 flex items-center justify-center"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleLoading}
+                disabled={isGoogleLoading || isSubmitting || authLoading}
               >
                 {isGoogleLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

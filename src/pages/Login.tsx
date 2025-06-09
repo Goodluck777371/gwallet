@@ -29,7 +29,7 @@ const formSchema = z.object({
 });
 
 const Login = () => {
-  const { login, signInWithGoogle, isAuthenticated } = useAuth();
+  const { login, signInWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
@@ -42,36 +42,29 @@ const Login = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (isSubmitting) return; // Prevent double submission
-    
     setIsSubmitting(true);
     try {
       await login(values.email, values.password);
-      // Don't need to handle success here, auth context will handle redirect
     } catch (error) {
       console.error("Login error:", error);
-      // Error is already handled in login function with toast
     } finally {
       setIsSubmitting(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
-    if (isGoogleLoading) return; // Prevent double submission
-    
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Google login error:", error);
-    } finally {
       setIsGoogleLoading(false);
     }
   };
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" />;
   }
 
   return (
@@ -101,7 +94,6 @@ const Login = () => {
                           placeholder="Enter your email" 
                           type="email"
                           autoComplete="email"
-                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -129,7 +121,6 @@ const Login = () => {
                           placeholder="Enter your password" 
                           type="password"
                           autoComplete="current-password"
-                          disabled={isSubmitting}
                           {...field} 
                         />
                       </FormControl>
@@ -141,9 +132,9 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || authLoading}
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || authLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Logging in...
@@ -170,7 +161,7 @@ const Login = () => {
                 type="button" 
                 className="w-full mt-4 flex items-center justify-center"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleLoading || isSubmitting}
+                disabled={isGoogleLoading}
               >
                 {isGoogleLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

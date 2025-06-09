@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,9 +29,11 @@ const Transactions = () => {
     const timer = setTimeout(() => {
       setIsLoaded(true);
     }, 100);
+
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch transactions when user is available
   useEffect(() => {
     if (!user?.id) return;
 
@@ -46,6 +49,7 @@ const Transactions = () => {
         
         if (error) throw error;
         
+        // Map to the Transaction type
         const formattedTransactions: Transaction[] = (data || []).map(tx => ({
           id: tx.id,
           type: tx.type as 'send' | 'receive',
@@ -69,6 +73,7 @@ const Transactions = () => {
 
     fetchTransactions();
     
+    // Set up realtime subscription for new transactions
     const subscription = supabase
       .channel('schema_db_changes')
       .on('postgres_changes', 
@@ -79,7 +84,7 @@ const Transactions = () => {
           filter: `user_id=eq.${user.id}`
         }, 
         (payload) => {
-          console.log("Transactions updated:", payload);
+          // Refresh transactions when there is a change
           fetchTransactions();
         })
       .subscribe();
@@ -92,6 +97,7 @@ const Transactions = () => {
   useEffect(() => {
     let result = transactions;
     
+    // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
       result = result.filter(
@@ -102,10 +108,12 @@ const Transactions = () => {
       );
     }
     
+    // Apply type filter
     if (typeFilter !== "all") {
       result = result.filter((tx) => tx.type === typeFilter);
     }
     
+    // Apply status filter
     if (statusFilter !== "all") {
       result = result.filter((tx) => tx.status === statusFilter);
     }
@@ -124,7 +132,7 @@ const Transactions = () => {
               Transaction History
             </h1>
             <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              View and filter your transaction history including mining claims
+              View and filter your transaction history
             </p>
           </div>
           
@@ -142,8 +150,11 @@ const Transactions = () => {
                 </div>
                 
                 <div className="flex gap-3">
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[150px]">
+                  <Select
+                    value={typeFilter}
+                    onValueChange={setTypeFilter}
+                  >
+                    <SelectTrigger className="w-[130px]">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -160,16 +171,13 @@ const Transactions = () => {
                           Received
                         </div>
                       </SelectItem>
-                      <SelectItem value="stake">Staking</SelectItem>
-                      <SelectItem value="unstake">Unstaking</SelectItem>
-                      <SelectItem value="rent_miner">Miner Rental</SelectItem>
-                      <SelectItem value="mining_claim">Mining Claim</SelectItem>
-                      <SelectItem value="buy">Purchase</SelectItem>
-                      <SelectItem value="sell">Sale</SelectItem>
                     </SelectContent>
                   </Select>
                   
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={setStatusFilter}
+                  >
                     <SelectTrigger className="w-[130px]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>

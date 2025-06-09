@@ -42,55 +42,28 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setAdminIsLoading(true);
       
-      // First try to authenticate with Supabase
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Use the Supabase function to authenticate admin
+      const { data, error } = await supabase.rpc('get_admin_session', {
+        admin_email: email,
+        admin_password: password
       });
       
-      if (authError) throw authError;
-      
-      // Check if user is admin
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_accounts')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (adminError || !adminData) {
-        await supabase.auth.signOut();
-        throw new Error('Not authorized as admin');
-      }
-      
-      // Get user profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('wallet_address')
-        .eq('id', authData.user.id)
-        .single();
-      
-      if (profileError) throw profileError;
-      
-      const adminUserData = {
-        id: authData.user.id,
-        email: authData.user.email || email,
-        wallet_address: profileData.wallet_address,
-        is_admin: true
-      };
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
       
       // Store the admin session
-      setAdminUser(adminUserData);
+      setAdminUser(data as AdminUser);
       sessionStorage.setItem('gwallet_admin_auth', 'true');
-      sessionStorage.setItem('gwallet_admin_session', JSON.stringify(adminUserData));
+      sessionStorage.setItem('gwallet_admin_session', JSON.stringify(data));
       
       toast({
-        title: 'Access Granted',
+        title: 'Login Successful',
         description: 'Welcome to the admin dashboard'
       });
     } catch (error: any) {
       console.error('Admin login error:', error);
       toast({
-        title: 'Access Denied',
+        title: 'Login Failed',
         description: error.message || 'Invalid credentials',
         variant: 'destructive'
       });
@@ -103,9 +76,6 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const adminLogout = async () => {
     try {
       setAdminIsLoading(true);
-      
-      // Sign out from Supabase
-      await supabase.auth.signOut();
       
       // Clear admin session
       setAdminUser(null);

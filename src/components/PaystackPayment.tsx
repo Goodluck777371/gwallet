@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumber } from '@/lib/utils';
@@ -32,55 +32,37 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   onClose
 }) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [scriptError, setScriptError] = useState(false);
 
   // Load Paystack script
   useEffect(() => {
-    // Check if script is already loaded
-    if (window.PaystackPop) {
-      setScriptLoaded(true);
-      return;
-    }
-
-    // Check if script already exists in DOM
-    const existingScript = document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]');
-    if (existingScript) {
-      existingScript.addEventListener('load', () => setScriptLoaded(true));
-      existingScript.addEventListener('error', () => setScriptError(true));
-      return;
-    }
-
     const script = document.createElement('script');
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
     script.onload = () => {
       console.log("Paystack script loaded successfully");
       setScriptLoaded(true);
-      setScriptError(false);
     };
     script.onerror = () => {
       console.error("Failed to load Paystack script");
-      setScriptError(true);
-      toast({
+      toast.error({
         title: "Payment Error",
-        description: "Could not load payment system. Please check your internet connection and try again.",
-        variant: "destructive"
+        description: "Could not load payment system. Please try again later."
       });
     };
-    document.head.appendChild(script);
+    document.body.appendChild(script);
     
     return () => {
-      // Don't remove script as it might be needed by other components
+      document.body.removeChild(script);
     };
-  }, [toast]);
+  }, []);
 
   const updateUserBalance = async (reference: string) => {
     try {
       console.log("Updating user balance with reference:", reference);
       
+      // Call a Supabase function to update the user's balance
       const { data, error } = await supabase.rpc('buy_gcoin', {
         currency_code: 'NGN',
         currency_amount: amount
@@ -92,6 +74,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       }
       
       console.log("Balance updated successfully:", data);
+      
+      // Refresh the user data to get updated balance
+      await supabase.auth.refreshSession();
+      
       return true;
     } catch (error) {
       console.error('Error updating balance:', error);
@@ -100,27 +86,14 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   };
 
   const initializePayment = () => {
-    if (scriptError) {
-      toast({
-        title: "Payment Error",
-        description: "Payment system could not be loaded. Please refresh the page and try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!window.PaystackPop) {
-      toast({
-        title: "Payment Error",
-        description: "Payment system not ready. Please wait a moment and try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
+      // Check if PaystackPop is available (script loaded)
+      if (!window.PaystackPop) {
+        throw new Error("Paystack SDK not loaded");
+      }
+
       console.log("Initializing Paystack payment");
       
       // Generate a reference
@@ -130,7 +103,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: email,
-        amount: Math.round(amount * 100), // Convert to kobo and ensure integer
+        amount: amount * 100, // Convert to kobo (smallest currency unit in Nigeria)
         currency: 'NGN',
         ref: reference,
         metadata: {
@@ -138,7 +111,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
             {
               display_name: "GCoins Amount",
               variable_name: "gcoins_amount",
-              value: gcoinsAmount.toString()
+              value: gcoinsAmount
             },
             {
               display_name: "User ID",
@@ -155,24 +128,25 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
         callback: async function(response: any) {
           console.log("Payment successful:", response);
           
+          // This happens after the payment is completed successfully
           const transactionReference = response.reference;
           
           // Update user balance
           const balanceUpdated = await updateUserBalance(transactionReference);
           
           if (balanceUpdated) {
-            toast({
-              title: "Payment Successful! 🎉",
-              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`,
-              variant: "default"
+            // Show success toast
+            toast.credit({
+              title: "Payment Successful",
+              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`
             });
             
+            // Call the onSuccess callback
             onSuccess();
           } else {
-            toast({
+            toast.error({
               title: "Transaction Error",
-              description: "Payment was successful but there was an error updating your balance. Please contact support with reference: " + transactionReference,
-              variant: "destructive"
+              description: "Payment was successful but there was an error updating your balance. Please contact support."
             });
           }
           setIsLoading(false);
@@ -180,10 +154,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
         onClose: function() {
           console.log("Payment window closed");
           
-          toast({
+          // User closed the payment window
+          toast.toast({
             title: "Payment Cancelled",
-            description: "You have cancelled the payment.",
-            variant: "default"
+            description: "You have cancelled the payment."
           });
           onClose();
           setIsLoading(false);
@@ -194,10 +168,9 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       handler.openIframe();
     } catch (error) {
       console.error('Paystack payment initialization error:', error);
-      toast({
+      toast.error({
         title: "Payment Error",
-        description: "Could not initialize payment. Please try again later.",
-        variant: "destructive"
+        description: "Could not initialize payment. Please try again later."
       });
       setIsLoading(false);
     }
@@ -206,7 +179,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   return (
     <Button 
       onClick={initializePayment} 
-      disabled={isLoading || !scriptLoaded || scriptError} 
+      disabled={isLoading || !scriptLoaded} 
       className="w-full"
     >
       {isLoading ? (
@@ -219,8 +192,6 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Loading payment...
         </>
-      ) : scriptError ? (
-        "Payment system unavailable"
       ) : (
         "Pay with Paystack"
       )}

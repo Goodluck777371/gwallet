@@ -75,84 +75,6 @@ export type Database = {
         }
         Relationships: []
       }
-      gcoin_price_history: {
-        Row: {
-          change_24h: number | null
-          id: string
-          market_cap: number | null
-          price: number
-          timestamp: string
-          volume: number
-        }
-        Insert: {
-          change_24h?: number | null
-          id?: string
-          market_cap?: number | null
-          price?: number
-          timestamp?: string
-          volume?: number
-        }
-        Update: {
-          change_24h?: number | null
-          id?: string
-          market_cap?: number | null
-          price?: number
-          timestamp?: string
-          volume?: number
-        }
-        Relationships: []
-      }
-      global_transaction_feed: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          price: number | null
-          timestamp: string
-          transaction_id: string | null
-          transaction_type: string
-          user_id: string | null
-          wallet_address: string | null
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          price?: number | null
-          timestamp?: string
-          transaction_id?: string | null
-          transaction_type: string
-          user_id?: string | null
-          wallet_address?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          price?: number | null
-          timestamp?: string
-          transaction_id?: string | null
-          transaction_type?: string
-          user_id?: string | null
-          wallet_address?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "global_transaction_feed_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "global_transaction_feed_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       Gwallet: {
         Row: {
           created_at: string
@@ -347,41 +269,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_login_history: {
-        Row: {
-          id: string
-          ip_address: unknown | null
-          login_time: string
-          status: string | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: string
-          ip_address?: unknown | null
-          login_time?: string
-          status?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: string
-          ip_address?: unknown | null
-          login_time?: string
-          status?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_login_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_miners: {
         Row: {
           id: string
@@ -443,19 +330,6 @@ export type Database = {
       admin_insert_transaction: {
         Args: { transaction_data: Json }
         Returns: undefined
-      }
-      admin_search_user: {
-        Args: { search_term: string }
-        Returns: {
-          id: string
-          username: string
-          email: string
-          wallet_address: string
-          balance: number
-          created_at: string
-          last_login: string
-          last_ip: unknown
-        }[]
       }
       admin_update_balance: {
         Args: { p_user_id: string; p_amount: number }

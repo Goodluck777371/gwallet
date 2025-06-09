@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { formatNumber } from "@/lib/utils";
 import {
@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import PaystackPayment from "@/components/PaystackPayment";
-import BitgetPayment from "@/components/BitgetPayment";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,17 +25,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Buy = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bitget'>('paystack');
   const [nairaAmount, setNairaAmount] = useState("");
   const [gcoinAmount, setGcoinAmount] = useState(0);
-  const [exchangeRate, setExchangeRate] = useState(1667); // 1 GCoin = 1,667 Naira
+  const [exchangeRate, setExchangeRate] = useState(850); // Fixed exchange rate at 850
   const [fee, setFee] = useState(0);
 
   useEffect(() => {
@@ -57,14 +54,14 @@ const Buy = () => {
       const feeAmount = 1;
       setFee(feeAmount);
       // Final GCoin amount after fee
-      setGcoinAmount(Math.max(0, rawGcoin - feeAmount));
+      setGcoinAmount(rawGcoin - feeAmount);
     } else {
       setGcoinAmount(0);
       setFee(0);
     }
   }, [nairaAmount, exchangeRate]);
 
-  const handleBuyClick = (method: 'paystack' | 'bitget') => {
+  const handleBuyClick = () => {
     // Validate input
     if (!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0) {
       toast({
@@ -75,14 +72,15 @@ const Buy = () => {
       return;
     }
     
-    setPaymentMethod(method);
+    // Open payment dialog
     setShowPaymentDialog(true);
   };
 
+  // This function is called after payment completion
   const handlePaymentSuccess = () => {
     setShowPaymentDialog(false);
     setNairaAmount("");
-    // Payment success handling is done by payment components
+    // Payment success handling is done by PaystackPayment component
   };
 
   return (
@@ -101,16 +99,16 @@ const Buy = () => {
               Buy GCoins
             </h1>
             <p className={`text-gray-500 transition-all duration-500 delay-100 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              Purchase GCoins with Nigerian Naira or Cryptocurrency
+              Purchase GCoins with your preferred currency
             </p>
           </div>
           
           <div className={`bg-white rounded-xl shadow-sm p-6 transition-all duration-500 delay-200 transform ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Card>
               <CardHeader>
-                <CardTitle>Purchase GCoins</CardTitle>
+                <CardTitle>Buy with Nigerian Naira</CardTitle>
                 <CardDescription>
-                  Buy GCoins using Naira (Paystack) or Cryptocurrency (Bitget)
+                  Purchase GCoins directly with NGN using Paystack
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -150,21 +148,13 @@ const Buy = () => {
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex gap-2">
+              <CardFooter>
                 <Button 
-                  onClick={() => handleBuyClick('paystack')}
+                  onClick={handleBuyClick}
                   disabled={!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0}
-                  className="flex-1"
+                  className="w-full"
                 >
-                  Pay with Paystack
-                </Button>
-                <Button 
-                  onClick={() => handleBuyClick('bitget')}
-                  disabled={!nairaAmount || isNaN(Number(nairaAmount)) || Number(nairaAmount) <= 0}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Pay with Crypto
+                  Buy Now
                 </Button>
               </CardFooter>
             </Card>
@@ -183,21 +173,13 @@ const Buy = () => {
           </DialogHeader>
           
           <div className="py-4">
-            {paymentMethod === 'paystack' ? (
-              <PaystackPayment 
-                amount={parseFloat(nairaAmount)} 
-                email={user?.email || ''}
-                gcoinsAmount={gcoinAmount}
-                onSuccess={handlePaymentSuccess}
-                onClose={() => setShowPaymentDialog(false)}
-              />
-            ) : (
-              <BitgetPayment
-                gcoinsAmount={gcoinAmount}
-                onSuccess={handlePaymentSuccess}
-                onClose={() => setShowPaymentDialog(false)}
-              />
-            )}
+            <PaystackPayment 
+              amount={parseFloat(nairaAmount)} 
+              email={user?.email || ''}
+              gcoinsAmount={gcoinAmount}
+              onSuccess={handlePaymentSuccess}
+              onClose={() => setShowPaymentDialog(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>

@@ -10,6 +10,9 @@ interface UserProfile {
   username: string;
   wallet_address: string;
   balance: number;
+  usd_balance?: number;
+  ngn_balance?: number;
+  ghs_balance?: number;
 }
 
 interface AuthContextProps {
@@ -22,6 +25,7 @@ interface AuthContextProps {
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  setUser: (user: UserProfile | null) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -63,15 +67,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user.id);
+            if (profile && mounted) {
+              setUser(profile);
+              setSession(session);
+            }
+          }
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         
         if (session?.user) {
           const profile = await fetchUserProfile(session.user.id);
-          if (profile) {
+          if (profile && mounted) {
             setUser(profile);
             if (event === 'SIGNED_IN') {
               await recordLoginActivity(session.user.id);
@@ -81,33 +111,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
         
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     );
 
-    // Check for existing session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Initial session check:', session?.user?.id);
-        
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          if (profile) {
-            setUser(profile);
-            setSession(session);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -240,6 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     signInWithGoogle,
     refreshProfile,
+    setUser,
   };
 
   return (

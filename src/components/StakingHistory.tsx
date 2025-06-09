@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -36,7 +37,7 @@ export interface StakingPosition {
 }
 
 const StakingHistory = () => {
-  const { user, refreshProfile } = useAuth();
+  const { user } = useAuth();
   const [stakings, setStakings] = useState<StakingPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,6 +48,21 @@ const StakingHistory = () => {
 
   useEffect(() => {
     if (!user?.id) return;
+
+    // Check for completed stakes that need to be processed
+    const checkCompletedStakes = async () => {
+      try {
+        console.log("Checking completed stakes for user:", user.id);
+        
+        // First attempt to process completed stakes via the database function
+        await supabase.rpc('process_completed_stakes');
+        
+        // Then fetch current staking positions
+        fetchStakings();
+      } catch (error) {
+        console.error('Error checking completed stakes:', error);
+      }
+    };
 
     const fetchStakings = async () => {
       try {
@@ -67,22 +83,21 @@ const StakingHistory = () => {
         setStakings(data || []);
       } catch (error) {
         console.error('Error fetching staking positions:', error);
-        toast({
+        toast.error({
           title: "Error",
-          description: "Failed to load staking history",
-          variant: "destructive",
+          description: "Failed to load staking history"
         });
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Initial fetch
-    fetchStakings();
+    // Check completed stakes first, which will then fetch current positions
+    checkCompletedStakes();
     
     // Set up realtime subscription for staking positions updates
     const subscription = supabase
-      .channel('staking_positions_changes')
+      .channel('schema_db_changes')
       .on('postgres_changes', 
         {
           event: '*', 
@@ -92,7 +107,8 @@ const StakingHistory = () => {
         }, 
         (payload) => {
           console.log("Staking positions updated:", payload);
-          fetchStakings(); // Refresh on any change
+          // Refresh staking positions when there is a change
+          fetchStakings();
         })
       .subscribe();
     
@@ -125,6 +141,7 @@ const StakingHistory = () => {
 
   const confirmUnstake = async () => {
     if (!unstakeDialog.position) return;
+    setIsLoading(true);
     setIsProcessing(true);
     
     try {
@@ -141,58 +158,19 @@ const StakingHistory = () => {
       
       console.log("Unstake successful:", data);
       
-      toast({
+      toast.credit({
         title: "Unstaking Successful",
         description: "Your GCoins have been returned to your wallet"
       });
-
-      // Refresh profile and staking positions
-      await refreshProfile();
     } catch (error: any) {
       console.error("Unstake error:", error);
-      toast({
+      toast.error({
         title: "Unstaking Failed",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        description: error.message || "An unexpected error occurred"
       });
     } finally {
       setUnstakeDialog({ open: false, position: null });
-      setIsProcessing(false);
-    }
-  };
-
-  const processCompletedStake = async (position: StakingPosition) => {
-    setIsProcessing(true);
-    
-    try {
-      console.log("Processing completed stake:", position.id);
-      
-      const { data, error } = await supabase.rpc('unstake_gcoin', {
-        staking_id: position.id
-      });
-      
-      if (error) {
-        console.error("Process completed stake error:", error);
-        throw error;
-      }
-      
-      console.log("Completed stake processed:", data);
-      
-      toast({
-        title: "Stake Completed! 🎉",
-        description: `Your stake of ${position.amount} GCoins has been completed with ${position.estimated_reward} GCoins reward`
-      });
-
-      // Refresh profile after successful claim
-      await refreshProfile();
-    } catch (error: any) {
-      console.error("Process completed stake error:", error);
-      toast({
-        title: "Error Processing Stake",
-        description: error.message || "Failed to process completed stake",
-        variant: "destructive",
-      });
-    } finally {
+      setIsLoading(false);
       setIsProcessing(false);
     }
   };
@@ -203,6 +181,43 @@ const StakingHistory = () => {
 
   const isStakeCompleted = (position: StakingPosition) => {
     return new Date(position.end_date) <= new Date() && position.status === 'active';
+  };
+
+  // Function to check and mark stake as completed if needed
+  const processCompletedStake = async (position: StakingPosition) => {
+    if (isStakeCompleted(position)) {
+      setIsLoading(true);
+      setIsProcessing(true);
+      
+      try {
+        console.log("Processing completed stake:", position.id);
+        
+        const { data, error } = await supabase.rpc('unstake_gcoin', {
+          staking_id: position.id
+        });
+        
+        if (error) {
+          console.error("Process completed stake error:", error);
+          throw error;
+        }
+        
+        console.log("Completed stake processed:", data);
+        
+        toast.success({
+          title: "Stake Completed",
+          description: `Your stake of ${position.amount} GCoins has been returned with ${position.estimated_reward} GCoins reward`
+        });
+      } catch (error: any) {
+        console.error("Process completed stake error:", error);
+        toast.error({
+          title: "Error Processing Stake",
+          description: error.message || "Failed to process completed stake"
+        });
+      } finally {
+        setIsLoading(false);
+        setIsProcessing(false);
+      }
+    }
   };
 
   return (

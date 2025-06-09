@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, Play, Pause, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -181,8 +182,6 @@ const Airdrop = () => {
 
     setIsLoading(true);
     try {
-      console.log("Claiming rewards for session:", session.id);
-      
       const now = new Date();
       const endTime = new Date(session.end_time);
       const sessionComplete = now >= endTime;
@@ -192,51 +191,36 @@ const Airdrop = () => {
       if (sessionComplete) {
         amountToCredit = session.estimated_earning;
       } else {
-        const elapsedTime = (now.getTime() - new Date(session.start_time).getTime()) / 1000;
-        amountToCredit = Math.max(0, session.rate_per_second * elapsedTime);
+        const elapsedHours = (now.getTime() - new Date(session.start_time).getTime()) / (1000 * 60 * 60);
+        amountToCredit = session.rate_per_second * elapsedHours * 3600;
       }
 
-      console.log("Amount to credit:", amountToCredit);
-
-      // First, update the mining session to mark it as claimed
+      // Update mining session
       const { error: sessionError } = await supabase
         .from('mining_sessions')
         .update({ 
           claimed: true,
           amount_earned: amountToCredit
         })
-        .eq('id', session.id)
-        .eq('user_id', user.id); // Security: ensure user owns this session
+        .eq('id', session.id);
 
-      if (sessionError) {
-        console.error("Session update error:", sessionError);
-        throw sessionError;
-      }
+      if (sessionError) throw sessionError;
 
-      // Then, add the rewards to user balance
+      // Add rewards to user balance
       const { error: rewardError } = await supabase.rpc('add_mining_rewards', {
         user_id_param: user.id,
         amount_param: amountToCredit
       });
 
-      if (rewardError) {
-        console.error("Reward error:", rewardError);
-        throw rewardError;
-      }
-
-      console.log("Mining rewards added successfully");
+      if (rewardError) throw rewardError;
 
       toast({
         title: "Rewards Claimed! 🎉",
         description: `You earned ${formatNumber(amountToCredit)} GCoins from mining.`,
       });
 
-      // Refresh both active sessions and user profile
-      await Promise.all([
-        fetchActiveSessions(),
-        refreshProfile()
-      ]);
-
+      fetchActiveSessions();
+      refreshProfile();
     } catch (error) {
       console.error('Error claiming rewards:', error);
       toast({
@@ -244,13 +228,6 @@ const Airdrop = () => {
         description: "Failed to claim mining rewards. Please try again.",
         variant: "destructive",
       });
-      
-      // If claiming failed, we should revert the session status
-      await supabase
-        .from('mining_sessions')
-        .update({ claimed: false })
-        .eq('id', session.id);
-        
     } finally {
       setIsLoading(false);
     }
@@ -273,12 +250,8 @@ const Airdrop = () => {
         description: `You now own another ${miner.name}!`,
       });
 
-      // Refresh owned miners and user profile
-      await Promise.all([
-        fetchOwnedMiners(),
-        refreshProfile()
-      ]);
-
+      fetchOwnedMiners();
+      refreshProfile();
     } catch (error: any) {
       console.error('Error purchasing miner:', error);
       toast({
@@ -347,7 +320,7 @@ const Airdrop = () => {
                   
                   // Calculate current earnings
                   const elapsedTime = (now.getTime() - new Date(session.start_time).getTime()) / 1000;
-                  const currentEarnings = Math.min(session.estimated_earning, Math.max(0, session.rate_per_second * elapsedTime));
+                  const currentEarnings = Math.min(session.estimated_earning, session.rate_per_second * elapsedTime);
                   
                   return (
                     <Card key={session.id} className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">

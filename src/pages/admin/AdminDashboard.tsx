@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatNumber, formatCurrency } from "@/lib/utils";
+import AdminUserSearch from "@/components/AdminUserSearch";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -247,6 +248,9 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* User Search */}
+        <AdminUserSearch />
+
         {/* Balance Management */}
         <Card>
           <CardHeader>
@@ -298,7 +302,9 @@ const AdminDashboard = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Exchange Rate Management */}
         <Card>
           <CardHeader>
@@ -327,32 +333,32 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent User Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {stats.recentActivity.map((activity: any) => (
-              <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Activity className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <p className="font-medium">{activity.profiles?.username || 'Unknown User'}</p>
-                    <p className="text-sm text-gray-500">{activity.action}</p>
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent User Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {stats.recentActivity.map((activity: any) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Activity className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="font-medium">{activity.profiles?.username || 'Unknown User'}</p>
+                      <p className="text-sm text-gray-500">{activity.action}</p>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(activity.timestamp).toLocaleString()}
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {new Date(activity.timestamp).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

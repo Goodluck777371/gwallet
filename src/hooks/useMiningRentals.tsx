@@ -183,11 +183,11 @@ export const useMiningRentals = () => {
 
       if (updateError) throw updateError;
 
-      // Add earnings to user balance
-      const { error: balanceError } = await supabase
-        .from('profiles')
-        .update({ balance: supabase.raw(`balance + ${claimableAmount}`) })
-        .eq('id', user.id);
+      // Add earnings to user balance using proper SQL function
+      const { error: balanceError } = await supabase.rpc('add_mining_rewards', {
+        user_id_param: user.id,
+        amount_param: claimableAmount
+      });
 
       if (balanceError) throw balanceError;
 

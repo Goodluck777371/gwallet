@@ -23,7 +23,6 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [adminIsLoading, setAdminIsLoading] = useState(true);
 
-  // Check for stored admin session on load
   useEffect(() => {
     const storedSession = sessionStorage.getItem('gwallet_admin_session');
     if (storedSession) {
@@ -42,25 +41,35 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setAdminIsLoading(true);
       
-      // First try to authenticate with Supabase
+      console.log('Attempting admin login with:', { email });
+      
+      // Try to authenticate with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password.trim(),
       });
       
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+      
+      console.log('Auth successful, checking admin status...');
       
       // Check if user is admin
       const { data: adminData, error: adminError } = await supabase
         .from('admin_accounts')
         .select('*')
-        .eq('email', email)
+        .eq('email', email.trim())
         .single();
       
       if (adminError || !adminData) {
+        console.error('Admin check failed:', adminError);
         await supabase.auth.signOut();
         throw new Error('Not authorized as admin');
       }
+      
+      console.log('Admin status confirmed');
       
       // Get user profile data
       const { data: profileData, error: profileError } = await supabase
@@ -69,7 +78,10 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', authData.user.id)
         .single();
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile fetch failed:', profileError);
+        throw profileError;
+      }
       
       const adminUserData = {
         id: authData.user.id,
@@ -78,7 +90,6 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         is_admin: true
       };
       
-      // Store the admin session
       setAdminUser(adminUserData);
       sessionStorage.setItem('gwallet_admin_auth', 'true');
       sessionStorage.setItem('gwallet_admin_session', JSON.stringify(adminUserData));
@@ -89,9 +100,17 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       console.error('Admin login error:', error);
+      let errorMessage = 'Invalid credentials or not authorized as admin';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password';
+      } else if (error.message?.includes('Not authorized')) {
+        errorMessage = 'You are not authorized to access the admin panel';
+      }
+      
       toast({
         title: 'Access Denied',
-        description: error.message || 'Invalid credentials',
+        description: errorMessage,
         variant: 'destructive'
       });
       throw error;
@@ -104,10 +123,8 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setAdminIsLoading(true);
       
-      // Sign out from Supabase
       await supabase.auth.signOut();
       
-      // Clear admin session
       setAdminUser(null);
       sessionStorage.removeItem('gwallet_admin_auth');
       sessionStorage.removeItem('gwallet_admin_session');

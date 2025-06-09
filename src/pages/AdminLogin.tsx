@@ -10,13 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
 const AdminLogin = () => {
+  const [email, setEmail] = useState("admin@gcoin.com");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { adminLogin, adminUser } = useAdminAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // If already logged in, redirect to dashboard
   if (adminUser) {
     navigate("/admin/dashboard");
     return null;
@@ -25,10 +25,10 @@ const AdminLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!password) {
+    if (!email || !password) {
       toast({
         title: "Missing Information",
-        description: "Please enter the admin password.",
+        description: "Please enter both email and password.",
         variant: "destructive"
       });
       return;
@@ -36,11 +36,9 @@ const AdminLogin = () => {
 
     try {
       setIsLoading(true);
-      // Use a fixed admin email for password-only login
-      await adminLogin("admin@gcoin.com", password);
+      await adminLogin(email, password);
       navigate("/admin/dashboard");
     } catch (error) {
-      // Error is already handled in adminLogin function
       console.error("Admin login form error:", error);
     } finally {
       setIsLoading(false);
@@ -56,11 +54,24 @@ const AdminLogin = () => {
           </div>
           <CardTitle className="text-2xl font-bold text-white">Admin Access</CardTitle>
           <CardDescription className="text-gray-300">
-            Enter admin password to access dashboard
+            Enter admin credentials to access dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-300">Admin Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@gcoin.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
+                disabled={isLoading}
+              />
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="password" className="text-gray-300">Admin Password</Label>
               <div className="relative">
@@ -68,7 +79,7 @@ const AdminLogin = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter admin password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 bg-gray-900/50 border-gray-700 text-white placeholder:text-gray-500"
@@ -93,6 +104,13 @@ const AdminLogin = () => {
               )}
             </Button>
           </form>
+          
+          <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-700/30">
+            <p className="text-xs text-blue-300">
+              <strong>Email:</strong> admin@gcoin.com<br />
+              <strong>Password:</strong> FantomAdmin990
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="text-center border-t border-white/10 text-gray-400 text-xs">
           <p className="w-full">GWallet Admin • Secure Access • {new Date().getFullYear()}</p>

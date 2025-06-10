@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         // Clear any cached data
-        localStorage.removeItem('sb-' + supabase.supabaseUrl.split('//')[1].split('.')[0] + '-auth-token');
+        localStorage.removeItem('gwallet_auth_token');
       } else if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully');
       }

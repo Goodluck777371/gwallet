@@ -50,6 +50,7 @@ const Header = () => {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: Home },
+    { name: 'Charts 📈', path: '/charts', icon: History, public: true },
     { name: 'Send', path: '/send', icon: SendHorizontal },
     { name: 'Transactions', path: '/transactions', icon: History },
     { name: 'Buy/Sell', path: '/buy', icon: DollarSign, submenu: [
@@ -84,69 +85,87 @@ const Header = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        {isAuthenticated && (
-          <nav className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              // Handle dropdown navigation
-              if (link.submenu) {
-                return (
-                  <DropdownMenu key={link.name}>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className={cn(
-                          "px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center",
-                          link.submenu.some(item => location.pathname === item.path)
-                            ? "bg-gcoin-blue/10 text-gcoin-blue"
-                            : "text-gray-700 hover:bg-gray-100"
-                        )}
-                      >
-                        <Icon className="h-4 w-4 mr-1" />
-                        <span>{link.name}</span>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      {link.submenu.map((item) => (
-                        <DropdownMenuItem key={item.name} asChild>
-                          <Link 
-                            to={item.path}
-                            className={cn(
-                              "w-full",
-                              location.pathname === item.path && "font-medium text-gcoin-blue"
-                            )}
-                          >
-                            {item.name}
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                );
-              }
-              
-              // Regular nav link
+        <nav className="hidden md:flex items-center space-x-1">
+          {navLinks.map((link) => {
+            // Show public links or authenticated links
+            if (!link.public && !isAuthenticated) return null;
+            
+            const Icon = link.icon;
+            // Handle dropdown navigation
+            if (link.submenu) {
               return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    location.pathname === link.path
-                      ? "bg-gcoin-blue/10 text-gcoin-blue"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                  )}
-                >
-                  <div className="flex items-center space-x-1">
-                    <Icon className="h-4 w-4" />
-                    <span>{link.name}</span>
-                  </div>
-                </Link>
+                <DropdownMenu key={link.name}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        "px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center",
+                        link.submenu.some(item => location.pathname === item.path)
+                          ? "bg-gcoin-blue/10 text-gcoin-blue"
+                          : "text-gray-700 hover:bg-gray-100"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 mr-1" />
+                      <span>{link.name}</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {link.submenu.map((item) => (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link 
+                          to={item.path}
+                          className={cn(
+                            "w-full",
+                            location.pathname === item.path && "font-medium text-gcoin-blue"
+                          )}
+                        >
+                          {item.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               );
-            })}
-          </nav>
-        )}
+            }
+            
+            // Regular nav link
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  location.pathname === link.path
+                    ? "bg-gcoin-blue/10 text-gcoin-blue"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                )}
+              >
+                <div className="flex items-center space-x-1">
+                  <Icon className="h-4 w-4" />
+                  <span>{link.name}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
 
         <div className="flex items-center">
+          {/* Always show Charts link */}
+          {!isAuthenticated && (
+            <div className="hidden md:flex items-center space-x-2 mr-4">
+              <Link 
+                to="/charts"
+                className={cn(
+                  "px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  location.pathname === '/charts'
+                    ? "bg-gcoin-blue/10 text-gcoin-blue"
+                    : "text-gray-700 hover:bg-gray-100"
+                )}
+              >
+                📈 Charts
+              </Link>
+            </div>
+          )}
+          
           {isAuthenticated ? (
             <>
               <DropdownMenu>
@@ -240,100 +259,115 @@ const Header = () => {
                     </Link>
                   </div>
 
-                  {isAuthenticated ? (
-                    <div className="space-y-6 flex flex-col h-full">
-                      <div className="space-y-1">
-                        {navLinks.map((link) => {
-                          const Icon = link.icon;
+                  <div className="space-y-6 flex flex-col h-full">
+                    {/* Always show Charts for mobile */}
+                    <Link
+                      to="/charts"
+                      className={cn(
+                        "flex items-center px-4 py-3 text-base rounded-md",
+                        location.pathname === '/charts'
+                          ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
+                          : "text-gray-700 hover:bg-gray-100"
+                      )}
+                    >
+                      📈 Charts
+                    </Link>
+                    
+                    {isAuthenticated ? (
+                      <>
+                        <div className="space-y-1">
+                          {navLinks.filter(link => !link.public).map((link) => {
+                            const Icon = link.icon;
 
-                          // Handle submenu
-                          if (link.submenu) {
+                            // Handle submenu
+                            if (link.submenu) {
+                              return (
+                                <div key={link.name} className="mb-2">
+                                  <div className="flex items-center px-4 py-2 text-base font-medium">
+                                    <Icon className="h-5 w-5 mr-3" />
+                                    {link.name}
+                                  </div>
+                                  <div className="pl-12 space-y-1">
+                                    {link.submenu.map((item) => (
+                                      <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={cn(
+                                          "block px-4 py-2 text-sm rounded-md",
+                                          location.pathname === item.path
+                                            ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
+                                            : "text-gray-700 hover:bg-gray-100"
+                                        )}
+                                      >
+                                        {item.name}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Regular link
                             return (
-                              <div key={link.name} className="mb-2">
-                                <div className="flex items-center px-4 py-2 text-base font-medium">
-                                  <Icon className="h-5 w-5 mr-3" />
-                                  {link.name}
-                                </div>
-                                <div className="pl-12 space-y-1">
-                                  {link.submenu.map((item) => (
-                                    <Link
-                                      key={item.path}
-                                      to={item.path}
-                                      className={cn(
-                                        "block px-4 py-2 text-sm rounded-md",
-                                        location.pathname === item.path
-                                          ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
-                                          : "text-gray-700 hover:bg-gray-100"
-                                      )}
-                                    >
-                                      {item.name}
-                                    </Link>
-                                  ))}
-                                </div>
-                              </div>
+                              <Link
+                                key={link.path}
+                                to={link.path}
+                                className={cn(
+                                  "flex items-center px-4 py-3 text-base rounded-md",
+                                  location.pathname === link.path
+                                    ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
+                                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                                )}
+                              >
+                                <Icon className="h-5 w-5 mr-3" />
+                                {link.name}
+                              </Link>
                             );
-                          }
-
-                          // Regular link
-                          return (
-                            <Link
-                              key={link.path}
-                              to={link.path}
-                              className={cn(
-                                "flex items-center px-4 py-3 text-base rounded-md",
-                                location.pathname === link.path
-                                  ? "bg-gcoin-blue/10 text-gcoin-blue font-medium"
-                                  : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                              )}
-                            >
-                              <Icon className="h-5 w-5 mr-3" />
-                              {link.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                      
-                      <div className="space-y-1 mt-6">
-                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
-                          Account
+                          })}
                         </div>
-                        <Link 
-                          to="/profile" 
-                          className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
-                        >
-                          <User className="h-5 w-5 mr-3" />
-                          Profile
+                        
+                        <div className="space-y-1 mt-6">
+                          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                            Account
+                          </div>
+                          <Link 
+                            to="/profile" 
+                            className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
+                          >
+                            <User className="h-5 w-5 mr-3" />
+                            Profile
+                          </Link>
+                          <Link 
+                            to="/settings" 
+                            className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
+                          >
+                            <Settings className="h-5 w-5 mr-3" />
+                            Settings
+                          </Link>
+                        </div>
+                        
+                        <div className="mt-auto">
+                          <Button 
+                            variant="ghost" 
+                            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 px-4"
+                            onClick={logout}
+                          >
+                            <LogOut className="mr-3 h-5 w-5" />
+                            Logout
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <Link to="/login" className="block">
+                          <Button className="w-full" variant="outline">Log in</Button>
                         </Link>
-                        <Link 
-                          to="/settings" 
-                          className="flex items-center px-4 py-3 text-base rounded-md text-gray-700 hover:bg-gray-100"
-                        >
-                          <Settings className="h-5 w-5 mr-3" />
-                          Settings
+                        <Link to="/register" className="block">
+                          <Button className="w-full">Register</Button>
                         </Link>
                       </div>
-                      
-                      <div className="mt-auto">
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 px-4"
-                          onClick={logout}
-                        >
-                          <LogOut className="mr-3 h-5 w-5" />
-                          Logout
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <Link to="/login" className="block">
-                        <Button className="w-full" variant="outline">Log in</Button>
-                      </Link>
-                      <Link to="/register" className="block">
-                        <Button className="w-full">Register</Button>
-                      </Link>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

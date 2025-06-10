@@ -38,13 +38,18 @@ const Charts = () => {
 
   const fetchChartData = async () => {
     try {
+      console.log('Fetching chart data...');
       const { data, error } = await supabase
         .from('gcoin_price_history')
         .select('*')
         .order('timestamp', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching price data:', error);
+        return;
+      }
       
+      console.log('Price data fetched:', data);
       if (data && data.length > 0) {
         setPriceData(data);
         const latest = data[data.length - 1];
@@ -58,14 +63,19 @@ const Charts = () => {
 
   const fetchTransactionFeed = async () => {
     try {
+      console.log('Fetching transaction feed...');
       const { data, error } = await supabase
         .from('global_transaction_feed')
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(20);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching transaction feed:', error);
+        return;
+      }
       
+      console.log('Transaction feed fetched:', data);
       if (data) {
         setTransactionFeed(data);
       }
@@ -127,7 +137,7 @@ const Charts = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">GCoin Charts</h1>
+            <h1 className="text-3xl font-bold mb-2">📈 GCoin Charts 📊</h1>
             <p className="text-gray-500">Real-time price data and market activity</p>
           </div>
 
@@ -224,28 +234,34 @@ const Charts = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {transactionFeed.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        tx.transaction_type === 'buy' ? 'bg-green-500' :
-                        tx.transaction_type === 'sell' ? 'bg-red-500' :
-                        tx.transaction_type === 'send' ? 'bg-blue-500' :
-                        'bg-yellow-500'
-                      }`} />
-                      <div>
-                        <div className="font-medium capitalize">{tx.transaction_type}</div>
-                        <div className="text-xs text-gray-500">
-                          {tx.wallet_address ? `${tx.wallet_address.slice(0, 8)}...${tx.wallet_address.slice(-4)}` : 'Unknown'}
+                {transactionFeed.length > 0 ? (
+                  transactionFeed.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          tx.transaction_type === 'buy' ? 'bg-green-500' :
+                          tx.transaction_type === 'sell' ? 'bg-red-500' :
+                          tx.transaction_type === 'send' ? 'bg-blue-500' :
+                          'bg-yellow-500'
+                        }`} />
+                        <div>
+                          <div className="font-medium capitalize">{tx.transaction_type}</div>
+                          <div className="text-xs text-gray-500">
+                            {tx.wallet_address ? `${tx.wallet_address.slice(0, 8)}...${tx.wallet_address.slice(-4)}` : 'Unknown'}
+                          </div>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <div className="font-medium">{tx.amount.toLocaleString()} GC</div>
+                        <div className="text-xs text-gray-500">{formatTime(tx.timestamp)}</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">{tx.amount.toLocaleString()} GC</div>
-                      <div className="text-xs text-gray-500">{formatTime(tx.timestamp)}</div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No transaction data available
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>

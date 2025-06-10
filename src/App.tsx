@@ -21,6 +21,7 @@ import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import AdminLogin from "@/pages/AdminLogin";
 import Airdrop from "@/pages/Airdrop";
+import Charts from "@/pages/Charts";
 
 // Admin Pages
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -40,6 +41,7 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/charts" element={<Charts />} />
             <Route path="*" element={<NotFound />} />
             
             {/* User Routes */}

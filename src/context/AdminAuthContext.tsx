@@ -25,22 +25,34 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check for stored admin session on load
   useEffect(() => {
-    const storedSession = sessionStorage.getItem('gwallet_admin_session');
-    if (storedSession) {
+    const checkAdminSession = async () => {
       try {
-        const parsedSession = JSON.parse(storedSession);
-        setAdminUser(parsedSession);
+        const storedSession = sessionStorage.getItem('gwallet_admin_session');
+        if (storedSession) {
+          const parsedSession = JSON.parse(storedSession);
+          console.log('Found stored admin session for:', parsedSession.email);
+          setAdminUser(parsedSession);
+        }
       } catch (error) {
-        console.error('Error parsing admin session:', error);
+        console.error('Error checking admin session:', error);
         sessionStorage.removeItem('gwallet_admin_session');
+        sessionStorage.removeItem('gwallet_admin_auth');
+      } finally {
+        setAdminIsLoading(false);
       }
-    }
-    setAdminIsLoading(false);
+    };
+
+    checkAdminSession();
   }, []);
 
   const adminLogin = async (email: string, password: string) => {
     try {
       setAdminIsLoading(true);
+      console.log('Attempting admin login for:', email);
+      
+      // Clear any existing admin session
+      sessionStorage.removeItem('gwallet_admin_session');
+      sessionStorage.removeItem('gwallet_admin_auth');
       
       // Use the Supabase function to authenticate admin
       const { data, error } = await supabase.rpc('get_admin_session', {
@@ -48,13 +60,27 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         admin_password: password
       });
       
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        console.error('Admin login RPC error:', error);
+        throw error;
+      }
+      
+      if (data && data.error) {
+        console.error('Admin login failed:', data.error);
+        throw new Error(data.error);
+      }
+      
+      console.log('Admin login successful for:', email);
       
       // Store the admin session
-      setAdminUser(data as AdminUser);
+      const adminUserData = {
+        ...data,
+        is_admin: true
+      } as AdminUser;
+      
+      setAdminUser(adminUserData);
       sessionStorage.setItem('gwallet_admin_auth', 'true');
-      sessionStorage.setItem('gwallet_admin_session', JSON.stringify(data));
+      sessionStorage.setItem('gwallet_admin_session', JSON.stringify(adminUserData));
       
       toast({
         title: 'Login Successful',
@@ -76,11 +102,15 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const adminLogout = async () => {
     try {
       setAdminIsLoading(true);
+      console.log('Admin logging out');
       
       // Clear admin session
       setAdminUser(null);
       sessionStorage.removeItem('gwallet_admin_auth');
       sessionStorage.removeItem('gwallet_admin_session');
+      
+      // Clear any browser caches
+      localStorage.clear();
       
       toast({
         title: 'Logged Out',

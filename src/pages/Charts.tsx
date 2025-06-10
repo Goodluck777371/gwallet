@@ -33,26 +33,26 @@ const Charts = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        console.log('Starting to fetch chart data...');
-        setIsLoading(true);
-        setError(null);
-        
-        await Promise.all([
-          fetchChartData(),
-          fetchTransactionFeed()
-        ]);
-      } catch (err) {
-        console.error('Error loading chart data:', err);
-        setError('Failed to load chart data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      console.log('Starting to fetch chart data...');
+      setIsLoading(true);
+      setError(null);
+      
+      await Promise.all([
+        fetchChartData(),
+        fetchTransactionFeed()
+      ]);
+    } catch (err) {
+      console.error('Error loading chart data:', err);
+      setError('Failed to load chart data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchChartData = async () => {
     try {
@@ -69,19 +69,30 @@ const Charts = () => {
       
       console.log('Price data fetched:', data);
       if (data && data.length > 0) {
-        setPriceData(data);
-        const latest = data[data.length - 1];
-        setCurrentPrice(latest.price || 853);
-        setPriceChange(latest.change_24h || 1.8);
+        const formattedData = data.map(item => ({
+          id: item.id,
+          price: parseFloat(item.price) || 853,
+          volume: parseFloat(item.volume) || 0,
+          timestamp: item.timestamp,
+          change_24h: parseFloat(item.change_24h) || 0
+        }));
+        
+        setPriceData(formattedData);
+        const latest = formattedData[formattedData.length - 1];
+        setCurrentPrice(latest.price);
+        setPriceChange(latest.change_24h);
       } else {
-        // Fallback data if no data in database
-        const fallbackData = [
-          { id: '1', price: 845, volume: 15000, timestamp: new Date(Date.now() - 24*60*60*1000).toISOString(), change_24h: -0.5 },
-          { id: '2', price: 850, volume: 22000, timestamp: new Date(Date.now() - 16*60*60*1000).toISOString(), change_24h: 0.8 },
-          { id: '3', price: 853, volume: 26000, timestamp: new Date().toISOString(), change_24h: 1.8 }
-        ];
-        setPriceData(fallbackData);
-        console.log('Using fallback price data');
+        // Generate sample data for demo
+        const now = new Date();
+        const sampleData = Array.from({ length: 24 }, (_, i) => ({
+          id: `sample-${i}`,
+          price: 850 + Math.random() * 10 - 5,
+          volume: 15000 + Math.random() * 10000,
+          timestamp: new Date(now.getTime() - (23 - i) * 60 * 60 * 1000).toISOString(),
+          change_24h: (Math.random() - 0.5) * 4
+        }));
+        setPriceData(sampleData);
+        console.log('Using sample price data');
       }
     } catch (error) {
       console.error('Error in fetchChartData:', error);
@@ -105,16 +116,24 @@ const Charts = () => {
       
       console.log('Transaction feed fetched:', data);
       if (data && data.length > 0) {
-        setTransactionFeed(data);
+        const formattedTransactions = data.map(item => ({
+          id: item.id,
+          transaction_type: item.transaction_type,
+          amount: parseFloat(item.amount) || 0,
+          price: parseFloat(item.price) || 853,
+          timestamp: item.timestamp,
+          wallet_address: item.wallet_address || 'Unknown'
+        }));
+        setTransactionFeed(formattedTransactions);
       } else {
-        // Fallback data if no data in database
-        const fallbackTransactions = [
+        // Generate sample transactions for demo
+        const sampleTransactions = [
           { id: '1', transaction_type: 'buy', amount: 1500, price: 853, timestamp: new Date().toISOString(), wallet_address: 'gCoinabcd1234' },
           { id: '2', transaction_type: 'sell', amount: 750, price: 851, timestamp: new Date(Date.now() - 30*60*1000).toISOString(), wallet_address: 'gCoinefgh5678' },
           { id: '3', transaction_type: 'send', amount: 200, price: 850, timestamp: new Date(Date.now() - 60*60*1000).toISOString(), wallet_address: 'gCoinijkl9012' }
         ];
-        setTransactionFeed(fallbackTransactions);
-        console.log('Using fallback transaction data');
+        setTransactionFeed(sampleTransactions);
+        console.log('Using sample transaction data');
       }
     } catch (error) {
       console.error('Error in fetchTransactionFeed:', error);
@@ -150,8 +169,8 @@ const Charts = () => {
 
   const chartData = priceData.map((item, index) => ({
     time: formatTime(item.timestamp),
-    price: Number(item.price) || 0,
-    volume: Number(item.volume) || 0,
+    price: item.price,
+    volume: item.volume,
     index
   }));
 
@@ -166,7 +185,7 @@ const Charts = () => {
                 <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Charts</h2>
                 <p className="text-gray-600">{error}</p>
                 <button 
-                  onClick={() => window.location.reload()} 
+                  onClick={fetchData} 
                   className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
                   Retry
@@ -232,7 +251,7 @@ const Charts = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {priceData.length > 0 ? Number(priceData[priceData.length - 1].volume || 0).toLocaleString() : '26,000'}
+                  {priceData.length > 0 ? Math.round(priceData[priceData.length - 1].volume).toLocaleString() : '26,000'}
                 </div>
                 <p className="text-xs text-muted-foreground">GCoins traded</p>
               </CardContent>
@@ -326,7 +345,7 @@ const Charts = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{Number(tx.amount || 0).toLocaleString()} GC</div>
+                        <div className="font-medium">{Math.round(tx.amount).toLocaleString()} GC</div>
                         <div className="text-xs text-gray-500">{formatTime(tx.timestamp)}</div>
                       </div>
                     </div>

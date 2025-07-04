@@ -37,6 +37,31 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
 
   // Load Paystack script
   useEffect(() => {
+    // Check if Paystack script is already loaded
+    if (window.PaystackPop) {
+      console.log("Paystack script already available");
+      setScriptLoaded(true);
+      return;
+    }
+
+    // Check if script is already in DOM
+    const existingScript = document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]');
+    if (existingScript) {
+      console.log("Paystack script already in DOM, waiting for load");
+      const checkLoaded = setInterval(() => {
+        if (window.PaystackPop) {
+          console.log("Paystack script loaded from existing");
+          setScriptLoaded(true);
+          clearInterval(checkLoaded);
+        }
+      }, 100);
+      
+      // Clear interval after 10 seconds to avoid infinite checking
+      setTimeout(() => clearInterval(checkLoaded), 10000);
+      return;
+    }
+
+    console.log("Loading Paystack script...");
     const script = document.createElement('script');
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
@@ -54,8 +79,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     };
     document.body.appendChild(script);
     
+    // Don't remove script on unmount to avoid issues with reloading
     return () => {
-      document.body.removeChild(script);
+      // Cleanup function - but don't remove script to avoid reload issues
+      console.log("PaystackPayment component unmounting");
     };
   }, []);
 
@@ -107,10 +134,14 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     try {
       // Check if PaystackPop is available (script loaded)
       if (!window.PaystackPop) {
+        console.error("Paystack SDK not available", { 
+          scriptLoaded, 
+          windowPaystackPop: !!window.PaystackPop 
+        });
         throw new Error("Paystack SDK not loaded");
       }
 
-      console.log("Initializing Paystack payment");
+      console.log("Initializing Paystack payment with amount:", amount, "email:", email);
       
       // Generate a reference
       const reference = 'GCoin_' + Math.floor(Math.random() * 1000000000 + 1) + '_' + new Date().getTime();

@@ -46,9 +46,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     };
     script.onerror = () => {
       console.error("Failed to load Paystack script");
-      toast.error({
+      toast({
         title: "Payment Error",
-        description: "Could not load payment system. Please try again later."
+        description: "Could not load payment system. Please try again later.",
+        variant: "destructive"
       });
     };
     document.body.appendChild(script);
@@ -75,13 +76,28 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       
       console.log("Balance updated successfully:", data);
       
+      // Create payment receipt
+      const fee = 1; // Fixed fee of 1 GCoin
+      const { data: receiptData, error: receiptError } = await supabase.rpc('create_payment_receipt', {
+        p_payment_reference: reference,
+        p_amount_naira: amount,
+        p_gcoin_amount: gcoinsAmount,
+        p_fee_gcoin: fee
+      });
+      
+      if (receiptError) {
+        console.error("Error creating receipt:", receiptError);
+      } else {
+        console.log("Receipt created:", receiptData);
+      }
+      
       // Refresh the user data to get updated balance
       await supabase.auth.refreshSession();
       
-      return true;
+      return { success: true, receiptId: receiptData };
     } catch (error) {
       console.error('Error updating balance:', error);
-      return false;
+      return { success: false };
     }
   };
 
@@ -132,21 +148,22 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           const transactionReference = response.reference;
           
           // Update user balance
-          const balanceUpdated = await updateUserBalance(transactionReference);
+          const result = await updateUserBalance(transactionReference);
           
-          if (balanceUpdated) {
-            // Show success toast
-            toast.credit({
-              title: "Payment Successful",
-              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins.`
+          if (result.success) {
+            // Show success toast with receipt details
+            toast({
+              title: "Payment Successful! 🎉",
+              description: `You have successfully purchased ${formatNumber(gcoinsAmount)} GCoins for ₦${formatNumber(amount)}. Receipt ID: ${result.receiptId}`,
             });
             
             // Call the onSuccess callback
             onSuccess();
           } else {
-            toast.error({
+            toast({
               title: "Transaction Error",
-              description: "Payment was successful but there was an error updating your balance. Please contact support."
+              description: "Payment was successful but there was an error updating your balance. Please contact support.",
+              variant: "destructive"
             });
           }
           setIsLoading(false);
@@ -155,7 +172,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
           console.log("Payment window closed");
           
           // User closed the payment window
-          toast.toast({
+          toast({
             title: "Payment Cancelled",
             description: "You have cancelled the payment."
           });
@@ -168,9 +185,10 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       handler.openIframe();
     } catch (error) {
       console.error('Paystack payment initialization error:', error);
-      toast.error({
+      toast({
         title: "Payment Error",
-        description: "Could not initialize payment. Please try again later."
+        description: "Could not initialize payment. Please try again later.",
+        variant: "destructive"
       });
       setIsLoading(false);
     }

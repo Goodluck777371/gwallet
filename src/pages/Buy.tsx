@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import PaystackPayment from "@/components/PaystackPayment";
+import PaymentReceipt from "@/components/PaymentReceipt";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,6 +32,8 @@ const Buy = () => {
   const { user } = useAuth();
   const [isLoaded, setIsLoaded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
   const [nairaAmount, setNairaAmount] = useState("");
   const [gcoinAmount, setGcoinAmount] = useState(0);
   const [exchangeRate, setExchangeRate] = useState(850); // Fixed exchange rate at 850
@@ -77,10 +80,27 @@ const Buy = () => {
   };
 
   // This function is called after payment completion
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setShowPaymentDialog(false);
     setNairaAmount("");
-    // Payment success handling is done by PaystackPayment component
+    
+    // Fetch the latest receipt for this user
+    try {
+      const { data, error } = await supabase
+        .from('payment_receipts')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (data && !error) {
+        setReceiptData(data);
+        setShowReceipt(true);
+      }
+    } catch (error) {
+      console.error('Error fetching receipt:', error);
+    }
   };
 
   return (
@@ -183,6 +203,15 @@ const Buy = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Receipt Dialog */}
+      {receiptData && (
+        <PaymentReceipt
+          isOpen={showReceipt}
+          onClose={() => setShowReceipt(false)}
+          receiptData={receiptData}
+        />
+      )}
     </div>
   );
 };

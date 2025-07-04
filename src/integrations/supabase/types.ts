@@ -207,6 +207,45 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_receipts: {
+        Row: {
+          amount_naira: number
+          created_at: string
+          fee_gcoin: number
+          gcoin_amount: number
+          id: string
+          payment_method: string
+          payment_reference: string
+          status: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_naira: number
+          created_at?: string
+          fee_gcoin?: number
+          gcoin_amount: number
+          id?: string
+          payment_method?: string
+          payment_reference: string
+          status?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_naira?: number
+          created_at?: string
+          fee_gcoin?: number
+          gcoin_amount?: number
+          id?: string
+          payment_method?: string
+          payment_reference?: string
+          status?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -471,6 +510,15 @@ export type Database = {
       }
       buy_gcoin: {
         Args: { currency_code: string; currency_amount: number }
+        Returns: string
+      }
+      create_payment_receipt: {
+        Args: {
+          p_payment_reference: string
+          p_amount_naira: number
+          p_gcoin_amount: number
+          p_fee_gcoin: number
+        }
         Returns: string
       }
       get_admin_session: {

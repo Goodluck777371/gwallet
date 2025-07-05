@@ -35,54 +35,46 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  // Load Paystack script
+  // Check for Paystack script (already included in index.html)
   useEffect(() => {
-    // Check if Paystack script is already loaded
-    if (window.PaystackPop) {
-      console.log("Paystack script already available");
-      setScriptLoaded(true);
+    const checkPaystackLoaded = () => {
+      if (window.PaystackPop) {
+        console.log("Paystack script is available");
+        setScriptLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (checkPaystackLoaded()) {
       return;
     }
 
-    // Check if script is already in DOM
-    const existingScript = document.querySelector('script[src="https://js.paystack.co/v1/inline.js"]');
-    if (existingScript) {
-      console.log("Paystack script already in DOM, waiting for load");
-      const checkLoaded = setInterval(() => {
-        if (window.PaystackPop) {
-          console.log("Paystack script loaded from existing");
-          setScriptLoaded(true);
-          clearInterval(checkLoaded);
-        }
-      }, 100);
-      
-      // Clear interval after 10 seconds to avoid infinite checking
-      setTimeout(() => clearInterval(checkLoaded), 10000);
-      return;
-    }
+    // If not loaded, wait for it with polling
+    console.log("Waiting for Paystack script to load...");
+    const interval = setInterval(() => {
+      if (checkPaystackLoaded()) {
+        clearInterval(interval);
+      }
+    }, 100);
 
-    console.log("Loading Paystack script...");
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.async = true;
-    script.onload = () => {
-      console.log("Paystack script loaded successfully");
-      setScriptLoaded(true);
-    };
-    script.onerror = () => {
-      console.error("Failed to load Paystack script");
-      toast({
-        title: "Payment Error",
-        description: "Could not load payment system. Please try again later.",
-        variant: "destructive"
-      });
-    };
-    document.body.appendChild(script);
+    // Clear interval after 10 seconds to avoid infinite checking
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      if (!window.PaystackPop) {
+        console.error("Paystack script failed to load within timeout");
+        toast({
+          title: "Payment Error",
+          description: "Could not load payment system. Please refresh and try again.",
+          variant: "destructive"
+        });
+      }
+    }, 10000);
     
-    // Don't remove script on unmount to avoid issues with reloading
     return () => {
-      // Cleanup function - but don't remove script to avoid reload issues
-      console.log("PaystackPayment component unmounting");
+      clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, []);
 
